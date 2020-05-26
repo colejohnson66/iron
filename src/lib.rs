@@ -20,5 +20,6 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+pub mod infra;
 pub mod io;
 pub mod url;
