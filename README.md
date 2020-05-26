@@ -13,7 +13,7 @@ In order to run a copy, you must have [Rust](https://www.rust-lang.org/) install
 Then you can run the following:
 
 ```bash
-> git clone --recurse-submodules https://github.com/colejohnson66/iron.git
+> git clone https://github.com/colejohnson66/iron.git
 > cd iron
 > cargo run
 ```
