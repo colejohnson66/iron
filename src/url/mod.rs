@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   mod.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,5 +20,7 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-pub mod io;
-pub mod url;
+pub mod percent_encoding;
+
+// TODO
+pub struct Url {}
