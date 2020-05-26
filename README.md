@@ -1,6 +1,6 @@
 # Iron
 
-Iron is a new web browser.
+Iron is a new web browser written in Rust.
 
 ## Notice
 
@@ -9,15 +9,13 @@ It may not compile, let alone run, at all on macOS or Windows.
 
 ## Building and Running
 
-In order to run a copy, you must have [CMake](https://cmake.org/) installed.
+In order to run a copy, you must have [Rust](https://www.rust-lang.org/) installed (see the [install guide](https://www.rust-lang.org/tools/install)).
 Then you can run the following:
 
 ```bash
 > git clone --recurse-submodules https://github.com/colejohnson66/iron.git
 > cd iron
-> cmake -S . -B build
-> cmake --build build
-> ./build/iron
+> cargo run
 ```
 
 ## License
