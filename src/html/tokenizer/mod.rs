@@ -309,7 +309,7 @@ impl HtmlTokenizer {
             doctype: None,
             temp_buf: "".into(),
             char_ref_code: 0,
-            tokens_to_emit: VecDeque::with_capacity(8),
+            tokens_to_emit: VecDeque::new(),
         }
     }
 
@@ -460,8 +460,8 @@ impl Iterator for HtmlTokenizer {
                 State::NumericCharacterReferenceEnd => self.numeric_character_reference_end(c),
             };
 
-            // if there's only one token, don't store it; just return it
             if tokens.len() == 1 {
+                // if there's only one token, don't store it; just return it
                 return Some(tokens.get(0).unwrap().clone());
             } else if tokens.len() > 1 {
                 self.tokens_to_emit = VecDeque::from(tokens);
