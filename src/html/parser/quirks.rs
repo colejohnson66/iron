@@ -26,6 +26,16 @@ pub enum QuirksMode {
     Full,
 }
 
+impl Clone for QuirksMode {
+    fn clone(&self) -> QuirksMode {
+        match self {
+            QuirksMode::None => QuirksMode::None,
+            QuirksMode::Limited => QuirksMode::Limited,
+            QuirksMode::Full => QuirksMode::Full,
+        }
+    }
+}
+
 const VALID_DOCTYPE_NAME: &'static str = "html";
 const VALID_SYSTEM_ID: &'static str = "about:legacy-compat";
 
