@@ -20,7 +20,99 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::html::parser::quirks;
+use crate::html::parser::{quirks, ParseHtmlError};
+use std::char;
+
+struct LineCountingChars {
+    contents: Vec<char>,
+    pos: usize,
+    line: u32,
+    line_pos: u32,
+}
+
+impl LineCountingChars {
+    fn new(string: &str) -> LineCountingChars {
+        LineCountingChars {
+            contents: string.chars().collect(),
+            pos: 0,
+            line: 0,
+            line_pos: 0,
+        }
+    }
+
+    fn seek(&mut self, new_pos: usize) {
+        self.pos = 0;
+        self.line = 0;
+        self.line_pos = 0;
+        // TODO: inefficient
+        for _ in 0..new_pos {
+            self.read();
+        }
+    }
+
+    fn read(&mut self) -> Option<char> {
+        if self.pos >= self.contents.len() {
+            return None;
+        }
+        // Bounds checked already performed, so just `unwrap()`
+        let c = self.contents.get(self.pos).unwrap();
+        if *c == '\n' {
+            self.line += 1;
+            self.line_pos = 0;
+        } else {
+            self.line_pos += 1;
+        }
+
+        Some(*c)
+    }
+
+    fn read_multiple(&mut self, buf: &mut [char]) -> usize {
+        // attempts to read `buf.len()` chars, but if `self.read()` returns `None`, aborts
+        for n in 0..buf.len() {
+            let c = self.read();
+            match c {
+                Some(c) => buf[n] = c,
+                None => return n,
+            }
+        }
+        // `buf.len()` characters read successfully
+        buf.len()
+    }
+
+    fn backtrack(&mut self) {
+        if self.pos >= self.contents.len() {
+            unreachable!();
+        }
+        // Bounds checked already performed, so just `unwrap()`
+        let c = self.contents.get(self.pos).unwrap();
+        if *c == '\n' {
+            self.line -= 1;
+            // TODO: calculate this by counting number of characters until last '\n'
+            self.line_pos = 5000;
+        }
+
+        self.pos -= 1;
+    }
+
+    fn backtrack_multiple(&mut self, count: usize) {
+        if self.pos >= self.contents.len() {
+            unreachable!();
+        }
+
+        // if backtracking more than possible, just reset to 0
+        if count >= self.pos {
+            self.pos = 0;
+            self.line = 0;
+            self.line_pos = 0;
+            return;
+        }
+
+        // TODO: inefficient
+        for _ in 0..count {
+            self.backtrack();
+        }
+    }
+}
 
 pub struct Attribute {
     name: String,
@@ -137,4 +229,74 @@ pub enum State {
     HexadecimalCharacterReference,
     DecimalCharacterReference,
     NumericCharacterReferenceEnd,
+}
+
+pub struct HtmlTokenizer {
+    html: LineCountingChars,
+    return_state: Option<State>,
+    last_emitted_tag: Option<Token>,
+
+    comment: Option<Token>,
+    tag: Option<Token>,
+    attr: Option<Token>,
+    doctype: Option<Token>,
+
+    temp_buf: String,
+    char_ref_code: u32,
+}
+
+impl HtmlTokenizer {
+    fn new(html: &str) -> HtmlTokenizer {
+        HtmlTokenizer {
+            html: LineCountingChars::new(html),
+            return_state: None,
+            last_emitted_tag: None,
+            comment: None,
+            tag: None,
+            attr: None,
+            doctype: None,
+            temp_buf: "".into(),
+            char_ref_code: 0,
+        }
+    }
+
+    fn char_token(c: char) -> Token {
+        Token::Character(c)
+    }
+    fn null_char_token() -> Token {
+        Token::Character('\0')
+    }
+    fn replacement_char_token() -> Token {
+        Token::Character(char::REPLACEMENT_CHARACTER)
+    }
+    fn eof_token() -> Token {
+        Token::Eof
+    }
+
+    fn lowercase_char_from_ascii_upper(c: char) -> char {
+        // TODO: assert `c` is ascii upper
+        char::from_u32((c as u32) + 0x20).unwrap()
+    }
+
+    fn error(_err: ParseHtmlError) {
+        // TODO: call a callback
+    }
+
+    fn in_attr_state(return_state: State) -> bool {
+        match return_state {
+            State::AttributeValueDoubleQuoted => true,
+            State::AttributeValueSingleQuoted => true,
+            State::AttributeValueUnquoted => true,
+            _ => false,
+        }
+    }
+}
+
+impl Iterator for HtmlTokenizer {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Token> {
+        // TODO: read a char and return Some(tokenize(c.unwrap()))
+        None
+    }
 }
