@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   mod.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,11 +20,29 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-// disable dead code warning
-// WARNING: this MUST be removed for release
-#![allow(dead_code)]
-
-pub mod html;
-pub mod infra;
-pub mod io;
-pub mod url;
+pub enum Node {
+    Attribute {
+        name: String,
+        value: String,
+    },
+    Document {
+        nodes: Vec<Node>,
+        attrs: Vec<Node>,
+    },
+    Doctype {
+        name: String,
+        public_id: String,
+        system_id: String,
+    },
+    Comment {
+        content: String,
+    },
+    Element {
+        name: String,
+        children: Vec<Node>,
+        attrs: Vec<Node>,
+    },
+    Text {
+        content: String,
+    },
+}

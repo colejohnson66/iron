@@ -1,9 +1,13 @@
 {
     "cSpell.words": [
-        "Prepend",
+        "Rawtext",
+        "Rcdata",
         "WHATWG",
         "codepoint",
+        "frameset",
         "noncharacter",
+        "noscript",
+        "prepend",
         "spec'd"
     ]
 }
