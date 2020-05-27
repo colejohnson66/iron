@@ -22,7 +22,7 @@
  */
 pub mod quirks;
 
-use crate::html::element;
+use crate::html::element::Node;
 
 pub enum ParseHtmlError {
     AbruptClosingOfEmptyComment,
@@ -112,10 +112,10 @@ pub struct HtmlParser {
     character_encoding: EncodingCertainty,
     insertion_mode: InsertionMode,
     orig_insertion_mode: Option<InsertionMode>,
-    open_elements_stack: Vec<element::Node>,
-    active_formatting_elements: Vec<element::Node>,
-    head_element_pointer: Option<element::Node>,
-    form_element_pointer: Option<element::Node>,
+    open_elements_stack: Vec<Node>,
+    active_formatting_elements: Vec<Node>,
+    head_element_pointer: Option<Node>,
+    form_element_pointer: Option<Node>,
     scripting: bool,
     frameset_ok: bool,
     template_insertion_modes: Vec<InsertionMode>,
