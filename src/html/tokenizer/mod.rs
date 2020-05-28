@@ -150,6 +150,14 @@ impl Comment {
     }
 }
 
+impl Clone for Comment {
+    fn clone(&self) -> Comment {
+        Comment {
+            value: self.value.clone(),
+        }
+    }
+}
+
 pub struct Doctype {
     quirks: quirks::QuirksMode,
     name: String,
@@ -164,6 +172,17 @@ impl Doctype {
             name: "".into(),
             public_id: "".into(),
             system_id: "".into(),
+        }
+    }
+}
+
+impl Clone for Doctype {
+    fn clone(&self) -> Doctype {
+        Doctype {
+            quirks: self.quirks.clone(),
+            name: self.name.clone(),
+            public_id: self.public_id.clone(),
+            system_id: self.system_id.clone(),
         }
     }
 }
@@ -197,6 +216,7 @@ impl Clone for Tag {
     }
 }
 
+#[derive(Clone)]
 pub enum Token {
     Attribute(Attribute),
     Character(char),
@@ -204,34 +224,6 @@ pub enum Token {
     Doctype(Doctype),
     Eof,
     Tag(Tag),
-}
-
-impl Clone for Token {
-    fn clone(&self) -> Token {
-        return match self {
-            Token::Attribute(attr) => Token::Attribute(Attribute {
-                name: attr.name.clone(),
-                value: attr.value.clone(),
-            }),
-            Token::Character(c) => Token::Character(*c),
-            Token::Comment(comment) => Token::Comment(Comment {
-                value: comment.value.clone(),
-            }),
-            Token::Doctype(doctype) => Token::Doctype(Doctype {
-                quirks: doctype.quirks.clone(),
-                name: doctype.name.clone(),
-                public_id: doctype.public_id.clone(),
-                system_id: doctype.system_id.clone(),
-            }),
-            Token::Eof => Token::Eof,
-            Token::Tag(tag) => Token::Tag(Tag {
-                name: tag.name.clone(),
-                self_closing: tag.self_closing,
-                is_end_tag: tag.is_end_tag,
-                attributes: tag.attributes.clone(),
-            }),
-        };
-    }
 }
 
 pub enum State {
