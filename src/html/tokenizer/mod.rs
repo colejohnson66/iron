@@ -402,7 +402,7 @@ impl HtmlTokenizer {
                 self.state = State::Data;
                 match self.tag.as_ref() {
                     Some(tag) => Some(vec![Token::Tag(tag.clone())]),
-                    None => None,
+                    None => panic!(),
                 }
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
@@ -583,15 +583,90 @@ impl HtmlTokenizer {
     }
 
     fn script_data_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        match c {
+            Some('/') => {
+                self.temp_buf = "".into();
+                self.state = State::ScriptDataEndTagOpen;
+                None
+            }
+            Some('!') => {
+                self.state = State::ScriptDataEscapeStart;
+                Some(vec![
+                    HtmlTokenizer::char_token('<'),
+                    HtmlTokenizer::char_token('!'),
+                ])
+            }
+            _ => {
+                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut reconsumed = self.script_data(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn script_data_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        match c {
+            Some(c) if ascii_alpha(c as u32) => {
+                self.tag = Some(Tag::new(true));
+                self.script_data_end_tag_name(Some(c))
+            }
+            _ => {
+                let mut tok = vec![
+                    HtmlTokenizer::char_token('<'),
+                    HtmlTokenizer::char_token('/'),
+                ];
+                let mut reconsumed = self.script_data(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn script_data_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                if self.end_tag_appropriate() {
+                    self.state = State::BeforeAttributeName;
+                    return None;
+                }
+            }
+            Some('/') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::SelfClosingStartTag;
+                    return None;
+                }
+            }
+            Some('>') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::Data;
+                    match self.tag.as_ref() {
+                        Some(tag) => return Some(vec![Token::Tag(tag.clone())]),
+                        None => panic!(),
+                    }
+                }
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            Some(c) if ascii_lower_alpha(c as u32) => {
+                self.tag.as_mut().unwrap().name.push(c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            _ => (),
+        }
+        let mut tok = vec![
+            HtmlTokenizer::char_token('<'),
+            HtmlTokenizer::char_token('/'),
+        ];
+        tok.append(&mut self.temp_buf_to_tokens());
+        let mut reconsumed = self.script_data(c).unwrap_or_default();
+        tok.append(&mut reconsumed);
+        Some(tok)
     }
 
     fn script_data_escape_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
