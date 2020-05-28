@@ -20,93 +20,11 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+pub mod detail;
 pub mod quirks;
 
 use crate::html::element::Node;
-
-pub enum ParseHtmlError {
-    AbruptClosingOfEmptyComment,
-    AbruptDoctypePublicIdentifier,
-    AbruptDoctypeSystemIdentifier,
-    AbsenseOfDigitsInNumericCharacterReference,
-    CDataInHtmlContext,
-    CharacterReferenceOutsideUnicodeRange,
-    ControlCharacterInInputStream,
-    ControlCharacterReference,
-    EndTagWithAttributes,
-    DuplicateAttribute,
-    EndTagWithTrailingSolidus,
-    EofBeforeTagName,
-    EofInCData,
-    EofInComment,
-    EofInDoctype,
-    EofInScriptHtmlCommentLikeText,
-    EofInTag,
-    IncorrectlyClosedComment,
-    IncorrectlyOpenedComment,
-    InvalidCharacterSequenceAfterDoctypeName,
-    InvalidFirstCharacterOfTagName,
-    MissingAttributeValue,
-    MissingDoctypeName,
-    MissingDoctypePublicIdentifier,
-    MissingDoctypeSystemIdentifier,
-    MissingEndTagName,
-    MissingQuoteBeforeDoctypePublicIdentifier,
-    MissingQuoteBeforeDoctypeSystemIdentifier,
-    MissingSemicolonAfterCharacterReference,
-    MissingWhitespaceAfterDoctypePublicKeyword,
-    MissingWhitespaceAfterDoctypeSystemKeyword,
-    MissingWhitespaceBeforeDoctypeName,
-    MissingWhitespaceBetweenAttributes,
-    MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers,
-    NestedComment,
-    NoncharacterCharacterReference,
-    NoncharacterInInputStream,
-    NonVoidHtmlElementStartTagWithTrailingSolidus,
-    NullCharacterReference,
-    SurrogateCharacterReference,
-    SurrogateCharacterInInputStream,
-    UnexpectedCharacterAfterDoctypeSystemIdentifier,
-    UnexpectedCharacterInAttributeName,
-    UnexpectedCharacterInUnquotedAttributeValue,
-    UnexpectedEqualsSignBeforeAttributeName,
-    UnexpectedNullCharacter,
-    UnexpectedQuestionMarkInsteadOfTagName,
-    UnexpectedSolidusInTag,
-    UnknownNamedCharacterReference,
-}
-
-pub enum InsertionMode {
-    Initial,
-    BeforeHtml,
-    BeforeHead,
-    InHead,
-    InHeadNoscript,
-    AfterHead,
-    InBody,
-    Text,
-    InTable,
-    InTableText,
-    InCaption,
-    InColumnGroup,
-    InTableBody,
-    InRow,
-    InCell,
-    InSelect,
-    InSelectInTable,
-    InTemplate,
-    AfterBody,
-    InFrameset,
-    AfterFrameset,
-    AfterAfterBody,
-    AfterAfterFrameset,
-}
-
-pub enum EncodingCertainty {
-    Certain(String),
-    Irrelevant,
-    Tentative(String),
-}
+use crate::html::parser::detail::*;
 
 pub struct HtmlParser {
     character_encoding: Option<EncodingCertainty>,

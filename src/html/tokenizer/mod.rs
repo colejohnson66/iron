@@ -21,9 +21,9 @@
  * ============================================================================
  */
 // Implements <https://html.spec.whatwg.org/multipage/parsing.html#tokenization>
-mod detail;
+pub mod detail;
 
-use crate::html::parser::{quirks, ParseHtmlError};
+use crate::html::parser::detail::ParseHtmlError;
 use crate::html::tokenizer::detail::*;
 use crate::infra::*;
 use std::char;
@@ -48,7 +48,7 @@ pub struct HtmlTokenizer {
 }
 
 impl HtmlTokenizer {
-    fn new(html: &str) -> HtmlTokenizer {
+    pub fn new(html: &str) -> HtmlTokenizer {
         HtmlTokenizer {
             html: LineCountingChars::new(html),
             state: State::Data,
