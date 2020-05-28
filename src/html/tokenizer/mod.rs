@@ -22,6 +22,7 @@
  */
 // Implements <https://html.spec.whatwg.org/multipage/parsing.html#tokenization>
 use crate::html::parser::{quirks, ParseHtmlError};
+use crate::infra::*;
 use std::char;
 use std::collections::VecDeque;
 
@@ -121,6 +122,15 @@ pub struct Attribute {
     value: String,
 }
 
+impl Attribute {
+    pub fn new() -> Attribute {
+        Attribute {
+            name: "".into(),
+            value: "".into(),
+        }
+    }
+}
+
 impl Clone for Attribute {
     fn clone(&self) -> Attribute {
         Attribute {
@@ -130,23 +140,70 @@ impl Clone for Attribute {
     }
 }
 
+pub struct Comment {
+    value: String,
+}
+
+impl Comment {
+    pub fn new() -> Comment {
+        Comment { value: "".into() }
+    }
+}
+
+pub struct Doctype {
+    quirks: quirks::QuirksMode,
+    name: String,
+    public_id: String,
+    system_id: String,
+}
+
+impl Doctype {
+    pub fn new() -> Doctype {
+        Doctype {
+            quirks: quirks::QuirksMode::None,
+            name: "".into(),
+            public_id: "".into(),
+            system_id: "".into(),
+        }
+    }
+}
+
+pub struct Tag {
+    name: String,
+    self_closing: Option<bool>,
+    is_end_tag: bool,
+    attributes: Option<Vec<Attribute>>,
+}
+
+impl Tag {
+    pub fn new(end_tag: bool) -> Tag {
+        Tag {
+            name: "".into(),
+            self_closing: None,
+            is_end_tag: end_tag,
+            attributes: None,
+        }
+    }
+}
+
+impl Clone for Tag {
+    fn clone(&self) -> Tag {
+        Tag {
+            name: self.name.clone(),
+            self_closing: self.self_closing.clone(),
+            is_end_tag: self.is_end_tag,
+            attributes: self.attributes.clone(),
+        }
+    }
+}
+
 pub enum Token {
     Attribute(Attribute),
     Character(char),
-    Comment(String),
-    Doctype {
-        quirks: quirks::QuirksMode,
-        name: String,
-        public_id: String,
-        system_id: String,
-    },
+    Comment(Comment),
+    Doctype(Doctype),
     Eof,
-    Tag {
-        name: String,
-        self_closing: bool,
-        is_end_tag: bool,
-        attributes: Vec<Attribute>,
-    },
+    Tag(Tag),
 }
 
 impl Clone for Token {
@@ -157,30 +214,22 @@ impl Clone for Token {
                 value: attr.value.clone(),
             }),
             Token::Character(c) => Token::Character(*c),
-            Token::Comment(comment) => Token::Comment(comment.clone()),
-            Token::Doctype {
-                quirks,
-                name,
-                public_id,
-                system_id,
-            } => Token::Doctype {
-                quirks: quirks.clone(),
-                name: name.clone(),
-                public_id: public_id.clone(),
-                system_id: system_id.clone(),
-            },
+            Token::Comment(comment) => Token::Comment(Comment {
+                value: comment.value.clone(),
+            }),
+            Token::Doctype(doctype) => Token::Doctype(Doctype {
+                quirks: doctype.quirks.clone(),
+                name: doctype.name.clone(),
+                public_id: doctype.public_id.clone(),
+                system_id: doctype.system_id.clone(),
+            }),
             Token::Eof => Token::Eof,
-            Token::Tag {
-                name,
-                self_closing,
-                is_end_tag,
-                attributes,
-            } => Token::Tag {
-                name: name.clone(),
-                self_closing: *self_closing,
-                is_end_tag: *is_end_tag,
-                attributes: attributes.clone(),
-            },
+            Token::Tag(tag) => Token::Tag(Tag {
+                name: tag.name.clone(),
+                self_closing: tag.self_closing,
+                is_end_tag: tag.is_end_tag,
+                attributes: tag.attributes.clone(),
+            }),
         };
     }
 }
@@ -283,12 +332,12 @@ pub struct HtmlTokenizer {
     state: State,
 
     return_state: Option<State>,
-    last_emitted_tag: Option<Token>,
+    last_emitted_tag: Option<Tag>,
 
-    comment: Option<Token>,
-    tag: Option<Token>,
-    attr: Option<Token>,
-    doctype: Option<Token>,
+    comment: Option<Comment>,
+    tag: Option<Tag>,
+    attr: Option<Attribute>,
+    doctype: Option<Doctype>,
 
     temp_buf: String,
     char_ref_code: u32,
@@ -342,6 +391,22 @@ impl HtmlTokenizer {
             State::AttributeValueUnquoted => true,
             _ => false,
         }
+    }
+
+    fn end_tag_appropriate(&mut self) -> bool {
+        // NOTE: will intentionally panic if `tag` is `None`
+        match self.last_emitted_tag.as_ref() {
+            None => false,
+            Some(last_tag) => last_tag.name == self.tag.as_ref().unwrap().name,
+        }
+    }
+
+    fn temp_buf_to_tokens(&mut self) -> Vec<Token> {
+        let mut buf: Vec<Token> = Vec::with_capacity(32);
+        for c in self.temp_buf.chars() {
+            buf.push(HtmlTokenizer::char_token(c))
+        }
+        buf
     }
 
     // actual tokenization takes place below
@@ -460,371 +525,558 @@ impl Iterator for HtmlTokenizer {
                 State::NumericCharacterReferenceEnd => self.numeric_character_reference_end(c),
             };
 
-            if tokens.len() == 1 {
-                // if there's only one token, don't store it; just return it
-                return Some(tokens.get(0).unwrap().clone());
-            } else if tokens.len() > 1 {
-                self.tokens_to_emit = VecDeque::from(tokens);
-                // removes front-most token and emits it
-                return Some(self.tokens_to_emit.pop_front().unwrap().clone());
+            match tokens {
+                Some(tokens) => {
+                    if tokens.len() == 1 {
+                        // if there's only one token, don't store it; just return it
+                        return Some(tokens.get(0).unwrap().clone());
+                    } else {
+                        self.tokens_to_emit = VecDeque::from(tokens);
+                        return Some(self.tokens_to_emit.pop_front().unwrap().clone());
+                    }
+                }
+                None => {
+                    // No tokens returned; consume next character and try again
+                }
             }
-
-            // No tokens returned; consume next character and try again
         }
     }
 }
 
 // implementation
 impl HtmlTokenizer {
-    fn data(&mut self, c: Option<char>) -> Vec<Token> {
+    fn data(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
             Some('&') => {
                 self.return_state = Some(State::Data);
                 self.state = State::CharacterReference;
-                vec![]
+                None
             }
             Some('<') => {
                 self.state = State::TagOpen;
-                vec![]
+                None
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                vec![HtmlTokenizer::char_token('\0')]
+                Some(vec![HtmlTokenizer::char_token('\0')])
             }
-            None => vec![HtmlTokenizer::eof_token()],
-            Some(c) => vec![HtmlTokenizer::char_token(c)],
+            None => Some(vec![HtmlTokenizer::eof_token()]),
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
         }
     }
 
-    fn rcdata(&mut self, c: Option<char>) -> Vec<Token> {
+    fn rcdata(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
             Some('&') => {
                 self.return_state = Some(State::Rcdata);
                 self.state = State::CharacterReference;
-                vec![]
+                None
             }
             Some('<') => {
                 self.state = State::RcdataLessThanSign;
-                vec![]
+                None
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                vec![HtmlTokenizer::replacement_char_token()]
+                Some(vec![HtmlTokenizer::replacement_char_token()])
             }
-            None => vec![HtmlTokenizer::eof_token()],
-            Some(c) => vec![HtmlTokenizer::char_token(c)],
+            None => Some(vec![HtmlTokenizer::eof_token()]),
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
         }
     }
 
-    fn rawtext(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn script_data(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn plaintext(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn tag_open(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn end_tag_open(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn tag_name(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn rcdata_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
-    }
-
-    fn rcdata_end_tag_open(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
+    fn rawtext(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some('<') => {
+                self.state = State::RawtextLessThanSign;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => Some(vec![HtmlTokenizer::eof_token()]),
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
+    }
+
+    fn script_data(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some('<') => {
+                self.state = State::ScriptDataLessThanSign;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => Some(vec![HtmlTokenizer::eof_token()]),
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
+    }
+
+    fn plaintext(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => Some(vec![HtmlTokenizer::eof_token()]),
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
+    }
+
+    fn tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some('!') => {
+                self.state = State::MarkupDeclarationOpen;
+                None
+            }
+            Some('/') => {
+                self.state = State::EndTagOpen;
+                None
+            }
+            Some(c) if is_ascii_alpha(c as u32) => {
+                self.tag = Some(Tag::new(false));
+                self.tag_name(Some(c))
+            }
+            Some('?') => {
+                self.error(ParseHtmlError::UnexpectedQuestionMarkInsteadOfTagName);
+                self.comment = Some(Comment::new());
+                self.bogus_comment(c)
+            }
+            None => Some(vec![
+                HtmlTokenizer::char_token('<'),
+                HtmlTokenizer::eof_token(),
+            ]),
+            Some(c) => {
+                self.error(ParseHtmlError::InvalidFirstCharacterOfTagName);
+                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut reconsumed = self.data(Some(c)).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
+    }
+
+    fn end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some(c) if is_ascii_alpha(c as u32) => {
+                self.tag = Some(Tag::new(true));
+                self.tag_name(Some(c))
+            }
+            Some('<') => {
+                self.error(ParseHtmlError::MissingEndTagName);
+                self.state = State::Data;
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofBeforeTagName);
+                Some(vec![
+                    HtmlTokenizer::char_token('<'),
+                    HtmlTokenizer::char_token('/'),
+                    HtmlTokenizer::eof_token(),
+                ])
+            }
+            Some(c) => {
+                self.error(ParseHtmlError::InvalidFirstCharacterOfTagName);
+                self.comment = Some(Comment::new());
+                self.bogus_comment(Some(c))
+            }
+        }
+    }
+
+    fn tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some(c) if is_ascii_whitespace(c as u32) => {
+                self.state = State::BeforeAttributeName;
+                None
+            }
+            Some('/') => {
+                self.state = State::SelfClosingStartTag;
+                None
+            }
+            Some('>') => {
+                self.state = State::Data;
+                match self.tag.as_ref() {
+                    Some(tag) => Some(vec![Token::Tag(tag.clone())]),
+                    None => None,
+                }
+            }
+            Some(c) if is_ascii_upper_alpha(c as u32) => {
+                let c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.tag.as_mut().unwrap().name.push(c);
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.tag.as_mut().unwrap().name.push('\u{FFFD}');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.tag.as_mut().unwrap().name.push(c);
+                None
+            }
+        }
+    }
+
+    fn rcdata_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some('/') => {
+                self.temp_buf = "".into();
+                self.state = State::RcdataEndTagOpen;
+                None
+            }
+            _ => {
+                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut reconsumed = self.rcdata(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
+    }
+
+    fn rcdata_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some(c) if is_ascii_alpha(c as u32) => {
+                self.tag = Some(Tag::new(true));
+                self.rcdata_end_tag_name(Some(c))
+            }
+            _ => {
+                let mut tok = vec![
+                    HtmlTokenizer::char_token('<'),
+                    HtmlTokenizer::char_token('/'),
+                ];
+                let mut reconsumed = self.rcdata(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
-    fn rcdata_end_tag_name(&mut self, c: Option<char>) -> Vec<Token> {
-        unreachable!()
+    fn rcdata_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        match c {
+            Some(c) if is_ascii_whitespace(c as u32) => {
+                if self.end_tag_appropriate() {
+                    self.state = State::BeforeAttributeName;
+                    return None;
+                }
+            }
+            Some('/') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::SelfClosingStartTag;
+                    return None;
+                }
+            }
+            Some('>') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::Data;
+                    return Some(vec![Token::Tag(self.tag.clone().unwrap())]);
+                }
+            }
+            Some(c) if is_ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            Some(c) if is_ascii_lower_alpha(c as u32) => {
+                self.tag.as_mut().unwrap().name.push(c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            _ => (),
+        }
+        let mut tok = vec![
+            HtmlTokenizer::char_token('<'),
+            HtmlTokenizer::char_token('/'),
+        ];
+        tok.append(&mut self.temp_buf_to_tokens());
+        let mut reconsumed = self.rcdata(c).unwrap_or_default();
+        tok.append(&mut reconsumed);
+        Some(tok)
     }
 
-    fn rawtext_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
+    fn rawtext_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn rawtext_end_tag_open(&mut self, c: Option<char>) -> Vec<Token> {
+    fn rawtext_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn rawtext_end_tag_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn rawtext_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_end_tag_open(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_end_tag_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escape_start(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escape_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escape_start_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escape_start_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped_dash_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped_end_tag_open(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_escaped_end_tag_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_escaped_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escape_start(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escape_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escaped(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escaped(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escaped_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escaped_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escaped_dash_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escaped_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escaped_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn script_data_double_escape_end(&mut self, c: Option<char>) -> Vec<Token> {
+    fn script_data_double_escape_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn before_attribute_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn before_attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn attribute_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_attribute_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn before_attribute_value(&mut self, c: Option<char>) -> Vec<Token> {
+    fn before_attribute_value(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn attribute_value_double_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn attribute_value_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn attribute_value_single_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn attribute_value_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn attribute_value_unquoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn attribute_value_unquoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_attribute_value_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_attribute_value_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn self_closing_start_tag(&mut self, c: Option<char>) -> Vec<Token> {
+    fn self_closing_start_tag(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn bogus_comment(&mut self, c: Option<char>) -> Vec<Token> {
+    fn bogus_comment(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn markup_declaration_open(&mut self, c: Option<char>) -> Vec<Token> {
+    fn markup_declaration_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_start(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_start_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_start_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_less_than_sign(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_less_than_sign_bang(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_less_than_sign_bang(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_less_than_sign_bang_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_less_than_sign_bang_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_less_than_sign_bang_dash_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_less_than_sign_bang_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_end_dash(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_end_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_end(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn comment_end_bang(&mut self, c: Option<char>) -> Vec<Token> {
+    fn comment_end_bang(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn before_doctype_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn before_doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_doctype_name(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_doctype_public_keyword(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_doctype_public_keyword(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn before_doctype_public_identifier(&mut self, c: Option<char>) -> Vec<Token> {
+    fn before_doctype_public_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype_public_identifier_double_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype_public_identifier_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype_public_identifier_single_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype_public_identifier_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_doctype_public_identifier(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_doctype_public_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn between_doctype_public_and_system_identifiers(&mut self, c: Option<char>) -> Vec<Token> {
+    fn between_doctype_public_and_system_identifiers(
+        &mut self,
+        c: Option<char>,
+    ) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_doctype_system_keyword(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_doctype_system_keyword(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn before_doctype_system_identifier(&mut self, c: Option<char>) -> Vec<Token> {
+    fn before_doctype_system_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype_system_identifier_double_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype_system_identifier_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn doctype_system_identifier_single_quoted(&mut self, c: Option<char>) -> Vec<Token> {
+    fn doctype_system_identifier_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn after_doctype_system_identifier(&mut self, c: Option<char>) -> Vec<Token> {
+    fn after_doctype_system_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn bogus_doctype(&mut self, c: Option<char>) -> Vec<Token> {
+    fn bogus_doctype(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn cdata_section(&mut self, c: Option<char>) -> Vec<Token> {
+    fn cdata_section(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn cdata_section_bracket(&mut self, c: Option<char>) -> Vec<Token> {
+    fn cdata_section_bracket(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn cdata_section_end(&mut self, c: Option<char>) -> Vec<Token> {
+    fn cdata_section_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn character_reference(&mut self, c: Option<char>) -> Vec<Token> {
+    fn character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn named_character_reference(&mut self, c: Option<char>) -> Vec<Token> {
+    fn named_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn ambiguous_ampersand(&mut self, c: Option<char>) -> Vec<Token> {
+    fn ambiguous_ampersand(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn numeric_character_reference(&mut self, c: Option<char>) -> Vec<Token> {
+    fn numeric_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn hexadecimal_character_reference_start(&mut self, c: Option<char>) -> Vec<Token> {
+    fn hexadecimal_character_reference_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn decimal_character_reference_start(&mut self, c: Option<char>) -> Vec<Token> {
+    fn decimal_character_reference_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn hexadecimal_character_reference(&mut self, c: Option<char>) -> Vec<Token> {
+    fn hexadecimal_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn decimal_character_reference(&mut self, c: Option<char>) -> Vec<Token> {
+    fn decimal_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 
-    fn numeric_character_reference_end(&mut self, c: Option<char>) -> Vec<Token> {
+    fn numeric_character_reference_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         unreachable!()
     }
 }
