@@ -109,7 +109,7 @@ pub enum EncodingCertainty {
 }
 
 pub struct HtmlParser {
-    character_encoding: EncodingCertainty,
+    character_encoding: Option<EncodingCertainty>,
     insertion_mode: InsertionMode,
     orig_insertion_mode: Option<InsertionMode>,
     open_elements_stack: Vec<Node>,
@@ -124,7 +124,7 @@ pub struct HtmlParser {
 impl HtmlParser {
     fn new() -> HtmlParser {
         HtmlParser {
-            character_encoding: EncodingCertainty::Certain("".to_string()),
+            character_encoding: None,
             insertion_mode: InsertionMode::Initial,
             orig_insertion_mode: None,
             open_elements_stack: vec![],
