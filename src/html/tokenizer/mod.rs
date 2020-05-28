@@ -248,6 +248,7 @@ impl Iterator for HtmlTokenizer {
 // implementation
 impl HtmlTokenizer {
     fn data(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.1
         match c {
             Some('&') => {
                 self.return_state = Some(State::Data);
@@ -268,6 +269,7 @@ impl HtmlTokenizer {
     }
 
     fn rcdata(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.2
         match c {
             Some('&') => {
                 self.return_state = Some(State::Rcdata);
@@ -288,6 +290,7 @@ impl HtmlTokenizer {
     }
 
     fn rawtext(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.3
         match c {
             Some('<') => {
                 self.state = State::RawtextLessThanSign;
@@ -303,6 +306,7 @@ impl HtmlTokenizer {
     }
 
     fn script_data(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.4
         match c {
             Some('<') => {
                 self.state = State::ScriptDataLessThanSign;
@@ -318,6 +322,7 @@ impl HtmlTokenizer {
     }
 
     fn plaintext(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.5
         match c {
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
@@ -329,6 +334,7 @@ impl HtmlTokenizer {
     }
 
     fn tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.6
         match c {
             Some('!') => {
                 self.state = State::MarkupDeclarationOpen;
@@ -362,6 +368,7 @@ impl HtmlTokenizer {
     }
 
     fn end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.7
         match c {
             Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
@@ -389,6 +396,7 @@ impl HtmlTokenizer {
     }
 
     fn tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.8
         match c {
             Some(c) if ascii_whitespace(c as u32) => {
                 self.state = State::BeforeAttributeName;
@@ -427,6 +435,7 @@ impl HtmlTokenizer {
     }
 
     fn rcdata_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.9
         match c {
             Some('/') => {
                 self.temp_buf = "".into();
@@ -443,6 +452,7 @@ impl HtmlTokenizer {
     }
 
     fn rcdata_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.10
         match c {
             Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
@@ -461,6 +471,7 @@ impl HtmlTokenizer {
     }
 
     fn rcdata_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.11
         match c {
             Some(c) if ascii_whitespace(c as u32) => {
                 if self.end_tag_appropriate() {
@@ -506,6 +517,7 @@ impl HtmlTokenizer {
     }
 
     fn rawtext_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.12
         match c {
             Some('/') => {
                 self.temp_buf = "".into();
@@ -522,6 +534,7 @@ impl HtmlTokenizer {
     }
 
     fn rawtext_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.13
         match c {
             Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
@@ -540,6 +553,7 @@ impl HtmlTokenizer {
     }
 
     fn rawtext_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.14
         match c {
             Some(c) if ascii_whitespace(c as u32) => {
                 if self.end_tag_appropriate() {
@@ -583,6 +597,7 @@ impl HtmlTokenizer {
     }
 
     fn script_data_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.15
         match c {
             Some('/') => {
                 self.temp_buf = "".into();
@@ -606,6 +621,7 @@ impl HtmlTokenizer {
     }
 
     fn script_data_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.16
         match c {
             Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
@@ -624,6 +640,7 @@ impl HtmlTokenizer {
     }
 
     fn script_data_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.17
         match c {
             Some(c) if ascii_whitespace(c as u32) => {
                 if self.end_tag_appropriate() {
@@ -670,59 +687,333 @@ impl HtmlTokenizer {
     }
 
     fn script_data_escape_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.18
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataEscapeStartDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            _ => self.script_data(c),
+        }
     }
 
     fn script_data_escape_start_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.19
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataEscapedDashDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            _ => self.script_data(c),
+        }
     }
 
     fn script_data_escaped(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.20
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataEscapedDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            Some('<') => {
+                self.state = State::ScriptDataEscapedLessThanSign;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
     }
 
     fn script_data_escaped_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.21
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataEscapedDashDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            Some('<') => {
+                self.state = State::ScriptDataEscapedLessThanSign;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.state = State::ScriptDataEscaped;
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.state = State::ScriptDataEscaped;
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+        }
     }
 
     fn script_data_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.22
+        match c {
+            Some('-') => Some(vec![HtmlTokenizer::char_token('-')]),
+            Some('<') => {
+                self.state = State::ScriptDataEscapedLessThanSign;
+                None
+            }
+            Some('>') => {
+                self.state = State::ScriptData;
+                Some(vec![HtmlTokenizer::char_token('>')])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.state = State::ScriptDataEscaped;
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.state = State::ScriptDataEscaped;
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+        }
     }
 
     fn script_data_escaped_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.23
+        match c {
+            Some('/') => {
+                self.temp_buf = "".into();
+                self.state = State::ScriptDataEscapedEndTagOpen;
+                None
+            }
+            Some(c) if ascii_alpha(c as u32) => {
+                self.temp_buf = "".into();
+                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut reconsumed = self
+                    .script_data_double_escape_start(Some(c))
+                    .unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+            _ => {
+                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn script_data_escaped_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.24
+        match c {
+            Some(c) if ascii_alpha(c as u32) => {
+                self.tag = Some(Tag::new(true));
+                self.script_data_escaped_end_tag_name(Some(c))
+            }
+            _ => {
+                let mut tok = vec![
+                    HtmlTokenizer::char_token('<'),
+                    HtmlTokenizer::char_token('/'),
+                ];
+                let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn script_data_escaped_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.25
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                if self.end_tag_appropriate() {
+                    self.state = State::BeforeAttributeName;
+                    return None;
+                }
+            }
+            Some('/') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::SelfClosingStartTag;
+                    return None;
+                }
+            }
+            Some('>') => {
+                if self.end_tag_appropriate() {
+                    self.state = State::Data;
+                    match self.tag.as_ref() {
+                        Some(tag) => return Some(vec![Token::Tag(tag.clone())]),
+                        None => panic!(),
+                    }
+                }
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            Some(c) if ascii_lower_alpha(c as u32) => {
+                self.tag.as_mut().unwrap().name.push(c);
+                self.temp_buf.push(c);
+                return None;
+            }
+            _ => (),
+        }
+        let mut tok = vec![
+            HtmlTokenizer::char_token('<'),
+            HtmlTokenizer::char_token('/'),
+        ];
+        tok.append(&mut self.temp_buf_to_tokens());
+        let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
+        tok.append(&mut reconsumed);
+        Some(tok)
     }
 
     fn script_data_double_escape_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.26
+        match c {
+            Some(c) if ascii_whitespace(c as u32) || c == '/' || c == '>' => {
+                if self.temp_buf == "script" {
+                    self.state = State::ScriptDataDoubleEscaped;
+                } else {
+                    self.state = State::ScriptDataEscaped;
+                }
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.temp_buf.push(lower_c);
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            Some(c) if ascii_lower_alpha(c as u32) => {
+                self.temp_buf.push(c);
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            _ => self.script_data_escaped(c),
+        }
     }
 
     fn script_data_double_escaped(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.27
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataDoubleEscapedDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            Some('<') => {
+                self.state = State::ScriptDataDoubleEscapedLessThanSign;
+                Some(vec![HtmlTokenizer::char_token('<')])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
     }
 
     fn script_data_double_escaped_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.28
+        match c {
+            Some('-') => {
+                self.state = State::ScriptDataDoubleEscapedDashDash;
+                Some(vec![HtmlTokenizer::char_token('-')])
+            }
+            Some('<') => {
+                self.state = State::ScriptDataDoubleEscapedLessThanSign;
+                Some(vec![HtmlTokenizer::char_token('<')])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.state = State::ScriptDataDoubleEscaped;
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.state = State::ScriptDataDoubleEscaped;
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+        }
     }
 
     fn script_data_double_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.29
+        match c {
+            Some('-') => Some(vec![HtmlTokenizer::char_token('-')]),
+            Some('<') => {
+                self.state = State::ScriptDataDoubleEscapedLessThanSign;
+                Some(vec![HtmlTokenizer::char_token('<')])
+            }
+            Some('>') => {
+                self.state = State::ScriptData;
+                Some(vec![HtmlTokenizer::char_token('>')])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.state = State::ScriptDataDoubleEscaped;
+                Some(vec![HtmlTokenizer::replacement_char_token()])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.state = State::ScriptDataDoubleEscaped;
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+        }
     }
 
     fn script_data_double_escaped_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.30
+        match c {
+            Some('/') => {
+                self.temp_buf = "".into();
+                self.state = State::ScriptDataDoubleEscapeEnd;
+                Some(vec![HtmlTokenizer::char_token('/')])
+            }
+            _ => self.script_data_double_escaped(c),
+        }
     }
 
     fn script_data_double_escape_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.31
+        match c {
+            Some(c) if ascii_whitespace(c as u32) || c == '/' || c == '>' => {
+                if self.temp_buf == "script" {
+                    self.state = State::ScriptDataEscaped;
+                } else {
+                    self.state = State::ScriptDataDoubleEscaped;
+                }
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.temp_buf.push(lower_c);
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            Some(c) if ascii_lower_alpha(c as u32) => {
+                self.temp_buf.push(c);
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            _ => self.script_data_double_escaped(c),
+        }
     }
 
     fn before_attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
