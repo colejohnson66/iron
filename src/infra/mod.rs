@@ -158,7 +158,7 @@ pub fn ascii_alphanumeric(code_point: u32) -> bool {
 // TODO: implement "convert a string into a scalar value string"
 
 pub fn isomorphic_encode(string: &str) -> Option<Vec<u8>> {
-    let mut output = Vec::with_capacity(string.chars().count().clone());
+    let mut output = Vec::with_capacity(string.len());
     loop {
         match string.chars().next() {
             Some(c) if (c as u32) > 0xFF => return None,
