@@ -338,7 +338,7 @@ impl HtmlTokenizer {
                 self.state = State::EndTagOpen;
                 None
             }
-            Some(c) if is_ascii_alpha(c as u32) => {
+            Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(false));
                 self.tag_name(Some(c))
             }
@@ -363,7 +363,7 @@ impl HtmlTokenizer {
 
     fn end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_alpha(c as u32) => {
+            Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
                 self.tag_name(Some(c))
             }
@@ -390,7 +390,7 @@ impl HtmlTokenizer {
 
     fn tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_whitespace(c as u32) => {
+            Some(c) if ascii_whitespace(c as u32) => {
                 self.state = State::BeforeAttributeName;
                 None
             }
@@ -405,7 +405,7 @@ impl HtmlTokenizer {
                     None => None,
                 }
             }
-            Some(c) if is_ascii_upper_alpha(c as u32) => {
+            Some(c) if ascii_upper_alpha(c as u32) => {
                 let c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
                 self.tag.as_mut().unwrap().name.push(c);
                 None
@@ -444,7 +444,7 @@ impl HtmlTokenizer {
 
     fn rcdata_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_alpha(c as u32) => {
+            Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
                 self.rcdata_end_tag_name(Some(c))
             }
@@ -462,7 +462,7 @@ impl HtmlTokenizer {
 
     fn rcdata_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_whitespace(c as u32) => {
+            Some(c) if ascii_whitespace(c as u32) => {
                 if self.end_tag_appropriate() {
                     self.state = State::BeforeAttributeName;
                     return None;
@@ -482,13 +482,13 @@ impl HtmlTokenizer {
                     return Some(vec![Token::Tag(tag)]);
                 }
             }
-            Some(c) if is_ascii_upper_alpha(c as u32) => {
+            Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
                 self.tag.as_mut().unwrap().name.push(lower_c);
                 self.temp_buf.push(c);
                 return None;
             }
-            Some(c) if is_ascii_lower_alpha(c as u32) => {
+            Some(c) if ascii_lower_alpha(c as u32) => {
                 self.tag.as_mut().unwrap().name.push(c);
                 self.temp_buf.push(c);
                 return None;
@@ -523,7 +523,7 @@ impl HtmlTokenizer {
 
     fn rawtext_end_tag_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_alpha(c as u32) => {
+            Some(c) if ascii_alpha(c as u32) => {
                 self.tag = Some(Tag::new(true));
                 self.rawtext_end_tag_name(Some(c))
             }
@@ -541,7 +541,7 @@ impl HtmlTokenizer {
 
     fn rawtext_end_tag_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         match c {
-            Some(c) if is_ascii_whitespace(c as u32) => {
+            Some(c) if ascii_whitespace(c as u32) => {
                 if self.end_tag_appropriate() {
                     self.state = State::BeforeAttributeName;
                     return None;
@@ -559,13 +559,13 @@ impl HtmlTokenizer {
                     return None;
                 }
             }
-            Some(c) if is_ascii_upper_alpha(c as u32) => {
+            Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
                 self.tag.as_mut().unwrap().name.push(lower_c);
                 self.temp_buf.push(c);
                 return None;
             }
-            Some(c) if is_ascii_lower_alpha(c as u32) => {
+            Some(c) if ascii_lower_alpha(c as u32) => {
                 self.tag.as_mut().unwrap().name.push(c);
                 self.temp_buf.push(c);
                 return None;

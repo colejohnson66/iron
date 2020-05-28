@@ -23,18 +23,18 @@
 // Implements <https://infra.spec.whatwg.org/>
 // TODO: implement "convert a string into a scalar value string"
 
-pub fn is_surrogate(code_point: u32) -> bool {
+pub fn surrogate(code_point: u32) -> bool {
     match code_point {
         0xD800..=0xDFFF => true,
         _ => false,
     }
 }
 
-pub fn is_scalar_value(code_point: u32) -> bool {
-    !is_surrogate(code_point)
+pub fn scalar_value(code_point: u32) -> bool {
+    !surrogate(code_point)
 }
 
-pub fn is_noncharacter(code_point: u32) -> bool {
+pub fn noncharacter(code_point: u32) -> bool {
     match code_point {
         0xFDD0..=0xFDEF => true,
         0xFFFE..=0xFFFF => true,
@@ -58,40 +58,40 @@ pub fn is_noncharacter(code_point: u32) -> bool {
     }
 }
 
-pub fn is_ascii_code_point(code_point: u32) -> bool {
+pub fn ascii_code_point(code_point: u32) -> bool {
     match code_point {
         0x0..=0x7F => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_tab_or_newline(code_point: u32) -> bool {
+pub fn ascii_tab_or_newline(code_point: u32) -> bool {
     match code_point {
         0x9 | 0xA | 0xD => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_whitespace(code_point: u32) -> bool {
+pub fn ascii_whitespace(code_point: u32) -> bool {
     match code_point {
         0x9 | 0xA | 0xC | 0xD | 0x20 => true,
         _ => false,
     }
 }
 
-pub fn is_c0_control(code_point: u32) -> bool {
+pub fn c0_control(code_point: u32) -> bool {
     match code_point {
         0x0..=0x1F => true,
         _ => false,
     }
 }
 
-pub fn is_c0_control_or_space(code_point: u32) -> bool {
-    is_c0_control(code_point) || code_point == 0x20
+pub fn c0_control_or_space(code_point: u32) -> bool {
+    c0_control(code_point) || code_point == 0x20
 }
 
-pub fn is_control(code_point: u32) -> bool {
-    if is_c0_control(code_point) {
+pub fn control(code_point: u32) -> bool {
+    if c0_control(code_point) {
         return true;
     }
     match code_point {
@@ -100,28 +100,28 @@ pub fn is_control(code_point: u32) -> bool {
     }
 }
 
-pub fn is_ascii_digit(code_point: u32) -> bool {
+pub fn ascii_digit(code_point: u32) -> bool {
     match code_point {
         0x30..=0x39 => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_upper_hex_digit(code_point: u32) -> bool {
+pub fn ascii_upper_hex_digit(code_point: u32) -> bool {
     match code_point {
         0x41..=0x46 => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_lower_hex_digit(code_point: u32) -> bool {
+pub fn ascii_lower_hex_digit(code_point: u32) -> bool {
     match code_point {
         0x61..=0x66 => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_hex_digit(code_point: u32) -> bool {
+pub fn ascii_hex_digit(code_point: u32) -> bool {
     match code_point {
         0x41..=0x46 => true,
         0x61..=0x66 => true,
@@ -129,21 +129,21 @@ pub fn is_ascii_hex_digit(code_point: u32) -> bool {
     }
 }
 
-pub fn is_ascii_upper_alpha(code_point: u32) -> bool {
+pub fn ascii_upper_alpha(code_point: u32) -> bool {
     match code_point {
         0x41..=0x5A => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_lower_alpha(code_point: u32) -> bool {
+pub fn ascii_lower_alpha(code_point: u32) -> bool {
     match code_point {
         0x61..=0x7A => true,
         _ => false,
     }
 }
 
-pub fn is_ascii_alpha(code_point: u32) -> bool {
+pub fn ascii_alpha(code_point: u32) -> bool {
     match code_point {
         0x41..=0x5A => true,
         0x61..=0x7A => true,
@@ -151,8 +151,8 @@ pub fn is_ascii_alpha(code_point: u32) -> bool {
     }
 }
 
-pub fn is_ascii_alphanumeric(code_point: u32) -> bool {
-    is_ascii_digit(code_point) || is_ascii_alpha(code_point)
+pub fn ascii_alphanumeric(code_point: u32) -> bool {
+    ascii_digit(code_point) || ascii_alpha(code_point)
 }
 
 // TODO: implement "convert a string into a scalar value string"
