@@ -21,7 +21,6 @@
  * ============================================================================
  */
 // Implements <https://html.spec.whatwg.org/multipage/parsing.html#tokenization>
-use crate::html::parser::quirks;
 use std::char;
 
 pub struct LineCountingChars {
