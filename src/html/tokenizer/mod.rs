@@ -1290,51 +1290,287 @@ impl HtmlTokenizer {
     }
 
     fn bogus_comment(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.41
+        match c {
+            Some('>') => {
+                self.state = State::Data;
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment)])
+            }
+            None => {
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.comment.as_mut().unwrap().value.push('\u{FFFD}');
+                None
+            }
+            Some(c) => {
+                self.comment.as_mut().unwrap().value.push(c);
+                None
+            }
+        }
     }
 
     fn markup_declaration_open(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.42
+        // NOTE: this fn only returns `None`
+        match c {
+            Some(c) => {
+                let mut peek: [char; 6] = ['\0'; 6];
+                let read = self.html.read_multiple(&mut peek);
+
+                // Two U+002D HYPHEN-MINUS characters (-)
+                if read >= 1 && c == '-' && peek[0] == '-' {
+                    // consume only the current and the peeked char
+                    // do so by backtracking until right after the second '-'
+                    self.html.backtrack_multiple(read - 1);
+                    self.comment = Some(Comment::new());
+                    self.state = State::CommentStart;
+                    return None;
+                }
+
+                let peeked: String = peek.iter().collect();
+
+                // ASCII case-insensitive match for the word "DOCTYPE"
+                if c.to_ascii_lowercase() == 'd' && peeked.to_ascii_lowercase() == "octype" {
+                    // consume and switch state
+                    self.state = State::Doctype;
+                    return None;
+                }
+
+                // The string "[CDATA[" (the five uppercase letters "CDATA"  with
+                //   a U+005B LEFT SQUARE BRACKET character before and after)
+                if c == '[' && peeked == "CDATA[" {
+                    // consume
+                    // TODO: Consume those characters. If there is an adjusted
+                    //   current node and it is not an element in the HTML
+                    //   namespace, then switch to the CDATA section state.
+                    //   Otherwise, this is a cdata-in-html-content parse error.
+                    //   Create a comment token whose data is the "[CDATA[" string.
+                    //   Switch to the bogus comment state.
+                    panic!();
+                }
+
+                // anything else
+                self.error(ParseHtmlError::IncorrectlyOpenedComment);
+                self.comment = Some(Comment::new());
+                self.state = State::BogusComment;
+                // consume nothing here, so backtrack 7 (because `next()` read 1
+                //   and this fn read 6)
+                self.html.backtrack_multiple(7);
+            }
+            _ => {
+                // anything else, but this is an EOF, so don't backtrack
+            }
+        }
+        None
     }
 
     fn comment_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.43
+        match c {
+            Some('-') => {
+                self.state = State::CommentStartDash;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptClosingOfEmptyComment);
+                self.state = State::Data;
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment)])
+            }
+            _ => self.comment(c),
+        }
     }
 
     fn comment_start_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.44
+        match c {
+            Some('-') => {
+                self.state = State::CommentEnd;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptClosingOfEmptyComment);
+                self.state = State::Data;
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInComment);
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.comment.as_mut().unwrap().value.push('-');
+                self.comment(c)
+            }
+        }
     }
 
     fn comment(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.45
+        match c {
+            Some('<') => {
+                self.comment.as_mut().unwrap().value.push('<');
+                self.state = State::CommentLessThanSign;
+                None
+            }
+            Some('-') => {
+                self.state = State::CommentEndDash;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.comment.as_mut().unwrap().value.push('\u{FFFD}');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInComment);
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.comment.as_mut().unwrap().value.push(c);
+                None
+            }
+        }
     }
 
     fn comment_less_than_sign(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.46
+        match c {
+            Some('!') => {
+                self.comment.as_mut().unwrap().value.push('!');
+                self.state = State::CommentLessThanSignBang;
+                None
+            }
+            Some('<') => {
+                self.comment.as_mut().unwrap().value.push('<');
+                None
+            }
+            _ => self.comment(c),
+        }
     }
 
     fn comment_less_than_sign_bang(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.47
+        match c {
+            Some('-') => {
+                self.state = State::CommentLessThanSignBangDash;
+                None
+            }
+            _ => self.comment(c),
+        }
     }
 
     fn comment_less_than_sign_bang_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.48
+        match c {
+            Some('-') => {
+                self.state = State::CommentLessThanSignBangDashDash;
+                None
+            }
+            _ => self.comment_end_dash(c),
+        }
     }
 
     fn comment_less_than_sign_bang_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.49
+        match c {
+            Some('<') => self.comment_end(Some('<')),
+            None => self.comment_end(None),
+            _ => {
+                self.error(ParseHtmlError::NestedComment);
+                self.comment_end(c)
+            }
+        }
     }
 
     fn comment_end_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.50
+        match c {
+            Some('-') => {
+                self.state = State::CommentEnd;
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInComment);
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.comment.as_mut().unwrap().value.push('-');
+                self.comment(c)
+            }
+        }
     }
 
     fn comment_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.51
+        match c {
+            Some('>') => {
+                self.state = State::Data;
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment)])
+            }
+            Some('!') => {
+                self.state = State::CommentEndBang;
+                None
+            }
+            Some('-') => {
+                self.comment.as_mut().unwrap().value.push('-');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInComment);
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.comment.as_mut().unwrap().value.push_str("--");
+                self.comment(c)
+            }
+        }
     }
 
     fn comment_end_bang(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.52
+        match c {
+            Some('-') => {
+                self.comment.as_mut().unwrap().value.push_str("--!");
+                self.state = State::CommentEndDash;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::IncorrectlyClosedComment);
+                self.state = State::Data;
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInComment);
+                let comment = self.comment.clone().unwrap();
+                self.comment = None;
+                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.comment.as_mut().unwrap().value.push_str("--!");
+                self.comment(c)
+            }
+        }
     }
 
     fn doctype(&mut self, c: Option<char>) -> Option<Vec<Token>> {
