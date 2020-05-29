@@ -1574,70 +1574,584 @@ impl HtmlTokenizer {
     }
 
     fn doctype(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.53
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BeforeDoctypeName;
+                None
+            }
+            Some('>') => self.before_doctype_name(Some('>')),
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = Doctype::new();
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingWhitespaceBeforeDoctypeName);
+                self.before_doctype_name(c)
+            }
+        }
     }
 
     fn before_doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.54
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let mut doctype = Doctype::new();
+                doctype.append_to_name(c.to_ascii_lowercase());
+                self.doctype = Some(doctype);
+                self.state = State::DoctypeName;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                let mut doctype = Doctype::new();
+                doctype.append_to_name('\u{FFFD}');
+                self.doctype = Some(doctype);
+                self.state = State::DoctypeName;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingDoctypeName);
+                let mut doctype = Doctype::new();
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = Doctype::new();
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                let mut doctype = Doctype::new();
+                doctype.append_to_name(c);
+                self.doctype = Some(doctype);
+                self.state = State::DoctypeName;
+                None
+            }
+        }
     }
 
     fn doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.55
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::AfterAttributeName;
+                None
+            }
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                self.doctype
+                    .as_mut()
+                    .unwrap()
+                    .append_to_name(c.to_ascii_lowercase());
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.doctype.as_mut().unwrap().append_to_name('\u{FFFD}');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = Doctype::new();
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.doctype.as_mut().unwrap().append_to_name(c);
+                None
+            }
+        }
     }
 
     fn after_doctype_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.56
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => return None,
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                return Some(vec![Token::Doctype(doctype)]);
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = Doctype::new();
+                doctype.force_quirks = true;
+                return Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()]);
+            }
+            Some(c) => {
+                let mut peek: [char; 5] = ['\0'; 5];
+                let read = self.html.read_multiple(&mut peek);
+                if read != 5 {
+                    // backtrack and reconsume `c`
+                    self.html.backtrack_multiple(read);
+                    self.error(ParseHtmlError::InvalidCharacterSequenceAfterDoctypeName);
+                    self.doctype.as_mut().unwrap().force_quirks = true;
+                    return self.bogus_doctype(Some(c));
+                }
+
+                let peeked = peek.iter().collect::<String>().to_ascii_lowercase();
+                if c.to_ascii_lowercase() == 'p' && peeked == "ublic" {
+                    // consume and switch state
+                    self.state = State::AfterDoctypePublicKeyword;
+                    return None;
+                }
+                if c.to_ascii_lowercase() == 's' && peeked == "ystem" {
+                    // consume and switch state
+                    self.state = State::AfterDoctypeSystemKeyword;
+                    return None;
+                }
+
+                self.error(ParseHtmlError::InvalidCharacterSequenceAfterDoctypeName);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                return self.bogus_doctype(Some(c));
+            }
+        }
     }
 
     fn after_doctype_public_keyword(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.57
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BeforeDoctypePublicIdentifier;
+                None
+            }
+            Some('"') => {
+                self.error(ParseHtmlError::MissingWhitespaceAfterDoctypePublicKeyword);
+                self.doctype.as_mut().unwrap().public_id = Some("".into());
+                self.state = State::DoctypePublicIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.error(ParseHtmlError::MissingWhitespaceAfterDoctypePublicKeyword);
+                self.doctype.as_mut().unwrap().public_id = Some("".into());
+                self.state = State::DoctypePublicIdentifierSingleQuoted;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingDoctypePublicIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypePublicIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn before_doctype_public_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.58
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('"') => {
+                self.doctype.as_mut().unwrap().public_id = Some("".into());
+                self.state = State::DoctypePublicIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.doctype.as_mut().unwrap().public_id = Some("".into());
+                self.state = State::DoctypePublicIdentifierSingleQuoted;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingDoctypePublicIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypePublicIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn doctype_public_identifier_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.59
+        match c {
+            Some('"') => {
+                self.state = State::AfterDoctypePublicIdentifier;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.doctype
+                    .as_mut()
+                    .unwrap()
+                    .append_to_public_id('\u{FFFD}');
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptDoctypePublicIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.doctype.as_mut().unwrap().append_to_public_id(c);
+                None
+            }
+        }
     }
 
     fn doctype_public_identifier_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.60
+        match c {
+            Some('\'') => {
+                self.state = State::AfterDoctypePublicIdentifier;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.doctype
+                    .as_mut()
+                    .unwrap()
+                    .append_to_public_id('\u{FFFD}');
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptDoctypePublicIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.doctype.as_mut().unwrap().append_to_public_id(c);
+                None
+            }
+        }
     }
 
     fn after_doctype_public_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.61
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BetweenDoctypePublicAndSystemIdentifiers;
+                None
+            }
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            Some('"') => {
+                self.error(
+                    ParseHtmlError::MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers,
+                );
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.error(
+                    ParseHtmlError::MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers,
+                );
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierSingleQuoted;
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn between_doctype_public_and_system_identifiers(
         &mut self,
         c: Option<char>,
     ) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.62
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            Some('"') => {
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierSingleQuoted;
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn after_doctype_system_keyword(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.63
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BeforeDoctypeSystemIdentifier;
+                None
+            }
+            Some('"') => {
+                self.error(ParseHtmlError::MissingWhitespaceAfterDoctypeSystemKeyword);
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.error(ParseHtmlError::MissingWhitespaceAfterDoctypeSystemKeyword);
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierSingleQuoted;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingDoctypeSystemIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn before_doctype_system_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.64
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('"') => {
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.doctype.as_mut().unwrap().system_id = Some("".into());
+                self.state = State::DoctypeSystemIdentifierSingleQuoted;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingDoctypeSystemIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
+                self.doctype.as_mut().unwrap().force_quirks = true;
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn doctype_system_identifier_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.65
+        match c {
+            Some('"') => {
+                self.state = State::AfterDoctypeSystemIdentifier;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.doctype
+                    .as_mut()
+                    .unwrap()
+                    .append_to_system_id('\u{FFFD}');
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptDoctypeSystemIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.doctype.as_mut().unwrap().append_to_system_id(c);
+                None
+            }
+        }
     }
 
     fn doctype_system_identifier_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.66
+        match c {
+            Some('\'') => {
+                self.state = State::AfterDoctypeSystemIdentifier;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.doctype
+                    .as_mut()
+                    .unwrap()
+                    .append_to_system_id('\u{FFFD}');
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::AbruptDoctypeSystemIdentifier);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                self.state = State::Data;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.doctype.as_mut().unwrap().append_to_system_id(c);
+                None
+            }
+        }
     }
 
     fn after_doctype_system_identifier(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.67
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInDoctype);
+                let mut doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                doctype.force_quirks = true;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::UnexpectedCharacterAfterDoctypeSystemIdentifier);
+                // do NOT set the force-quirks flag
+                self.bogus_doctype(c)
+            }
+        }
     }
 
     fn bogus_doctype(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.68
+        match c {
+            Some('>') => {
+                self.state = State::Data;
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype)])
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                None
+            }
+            None => {
+                let doctype = self.doctype.clone().unwrap();
+                self.doctype = None;
+                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+            }
+            _ => None,
+        }
     }
 
     fn cdata_section(&mut self, c: Option<char>) -> Option<Vec<Token>> {

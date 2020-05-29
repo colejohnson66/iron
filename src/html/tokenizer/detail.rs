@@ -157,27 +157,48 @@ impl Clone for Comment {
 }
 
 pub struct Doctype {
-    pub quirks: quirks::QuirksMode,
-    pub name: String,
-    pub public_id: String,
-    pub system_id: String,
+    pub force_quirks: bool,
+    pub name: Option<String>,
+    pub public_id: Option<String>,
+    pub system_id: Option<String>,
 }
 
 impl Doctype {
     pub fn new() -> Doctype {
         Doctype {
-            quirks: quirks::QuirksMode::None,
-            name: "".into(),
-            public_id: "".into(),
-            system_id: "".into(),
+            force_quirks: false,
+            name: None,
+            public_id: None,
+            system_id: None,
         }
+    }
+
+    pub fn append_to_name(&mut self, c: char) {
+        if self.name.is_none() {
+            self.name = Some("".into());
+        }
+        self.name.as_mut().unwrap().push(c);
+    }
+
+    pub fn append_to_public_id(&mut self, c: char) {
+        if self.public_id.is_none() {
+            self.public_id = Some("".into());
+        }
+        self.public_id.as_mut().unwrap().push(c);
+    }
+
+    pub fn append_to_system_id(&mut self, c: char) {
+        if self.system_id.is_none() {
+            self.system_id = Some("".into());
+        }
+        self.system_id.as_mut().unwrap().push(c);
     }
 }
 
 impl Clone for Doctype {
     fn clone(&self) -> Doctype {
         Doctype {
-            quirks: self.quirks.clone(),
+            force_quirks: self.force_quirks,
             name: self.name.clone(),
             public_id: self.public_id.clone(),
             system_id: self.system_id.clone(),
