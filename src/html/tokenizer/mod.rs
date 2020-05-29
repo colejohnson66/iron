@@ -2155,15 +2155,54 @@ impl HtmlTokenizer {
     }
 
     fn cdata_section(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.69
+        match c {
+            Some(']') => {
+                self.state = State::CdataSectionBracket;
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInCData);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+        }
     }
 
     fn cdata_section_bracket(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.70
+        match c {
+            Some(']') => {
+                self.state = State::CdataSectionEnd;
+                None
+            }
+            _ => {
+                let mut tok = vec![HtmlTokenizer::char_token(']')];
+                let mut reconsumed = self.cdata_section(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn cdata_section_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.71
+        match c {
+            Some(']') => Some(vec![HtmlTokenizer::char_token(']')]),
+            Some('>') => {
+                self.state = State::Data;
+                None
+            }
+            _ => {
+                let mut tok = vec![
+                    HtmlTokenizer::char_token(']'),
+                    HtmlTokenizer::char_token(']'),
+                ];
+                let mut reconsumed = self.cdata_section(c).unwrap_or_default();
+                tok.append(&mut reconsumed);
+                Some(tok)
+            }
+        }
     }
 
     fn character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
