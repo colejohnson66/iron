@@ -38,7 +38,6 @@ pub struct HtmlTokenizer {
 
     comment: Option<Comment>,
     tag: Option<Tag>,
-    attr: Option<Attribute>,
     doctype: Option<Doctype>,
 
     temp_buf: String,
@@ -56,7 +55,6 @@ impl HtmlTokenizer {
             last_emitted_tag: None,
             comment: None,
             tag: None,
-            attr: None,
             doctype: None,
             temp_buf: "".into(),
             char_ref_code: 0,
@@ -478,12 +476,14 @@ impl HtmlTokenizer {
                     self.state = State::BeforeAttributeName;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('/') => {
                 if self.end_tag_appropriate() {
                     self.state = State::SelfClosingStartTag;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('>') => {
                 if self.end_tag_appropriate() {
@@ -492,6 +492,7 @@ impl HtmlTokenizer {
                     self.tag = None;
                     return Some(vec![Token::Tag(tag)]);
                 }
+                // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
@@ -560,18 +561,21 @@ impl HtmlTokenizer {
                     self.state = State::BeforeAttributeName;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('/') => {
                 if self.end_tag_appropriate() {
                     self.state = State::SelfClosingStartTag;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('>') => {
                 if self.end_tag_appropriate() {
                     self.state = State::Data;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
@@ -647,12 +651,14 @@ impl HtmlTokenizer {
                     self.state = State::BeforeAttributeName;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('/') => {
                 if self.end_tag_appropriate() {
                     self.state = State::SelfClosingStartTag;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('>') => {
                 if self.end_tag_appropriate() {
@@ -662,6 +668,7 @@ impl HtmlTokenizer {
                         None => panic!(),
                     }
                 }
+                // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
@@ -839,12 +846,14 @@ impl HtmlTokenizer {
                     self.state = State::BeforeAttributeName;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('/') => {
                 if self.end_tag_appropriate() {
                     self.state = State::SelfClosingStartTag;
                     return None;
                 }
+                // otherwise treat as "anything else"
             }
             Some('>') => {
                 if self.end_tag_appropriate() {
@@ -854,6 +863,7 @@ impl HtmlTokenizer {
                         None => panic!(),
                     }
                 }
+                // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
                 let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
@@ -1017,39 +1027,266 @@ impl HtmlTokenizer {
     }
 
     fn before_attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.32
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('/') | Some('>') | None => self.after_attribute_name(c),
+            Some('=') => {
+                self.error(ParseHtmlError::UnexpectedEqualsSignBeforeAttributeName);
+                self.tag.as_mut().unwrap().create_attribute();
+                self.tag.as_mut().unwrap().append_to_cur_attr_name('=');
+                self.state = State::AttributeName;
+                None
+            }
+            _ => {
+                self.tag.as_mut().unwrap().create_attribute();
+                self.attribute_name(c)
+            }
+        }
     }
 
     fn attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.33
+        // TODO: When leaving this state, and before emitting the tag token, check for duplicate attributes
+        match c {
+            Some(c) if ascii_whitespace(c as u32) || c == '/' || c == '>' => {
+                return self.after_attribute_name(Some(c))
+            }
+            None => return self.after_attribute_name(None),
+            Some('=') => {
+                self.state = State::BeforeAttributeValue;
+                return None;
+            }
+            Some(c) if ascii_upper_alpha(c as u32) => {
+                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
+                self.tag.as_mut().unwrap().append_to_cur_attr_name(lower_c);
+                return None;
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.tag
+                    .as_mut()
+                    .unwrap()
+                    .append_to_cur_attr_name('\u{FFFD}');
+                return None;
+            }
+            Some(c) if c == '"' || c == '\'' || c == '<' => {
+                self.error(ParseHtmlError::UnexpectedCharacterInAttributeName);
+                // treat as "anything else"
+            }
+            _ => (),
+        }
+        self.tag
+            .as_mut()
+            .unwrap()
+            .append_to_cur_attr_name(c.unwrap());
+        None
     }
 
     fn after_attribute_name(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.34
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('/') => {
+                self.state = State::SelfClosingStartTag;
+                None
+            }
+            Some('=') => {
+                self.state = State::BeforeAttributeValue;
+                None
+            }
+            Some('>') => {
+                self.state = State::Data;
+                let tag = self.tag.clone().unwrap();
+                self.tag = None;
+                Some(vec![Token::Tag(tag)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.tag.as_mut().unwrap().create_attribute();
+                self.attribute_name(Some(c))
+            }
+        }
     }
 
     fn before_attribute_value(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.35
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => None,
+            Some('"') => {
+                self.state = State::AttributeValueDoubleQuoted;
+                None
+            }
+            Some('\'') => {
+                self.state = State::AttributeValueSingleQuoted;
+                None
+            }
+            Some('>') => {
+                self.error(ParseHtmlError::MissingAttributeValue);
+                self.state = State::Data;
+                let tag = self.tag.clone().unwrap();
+                self.tag = None;
+                Some(vec![Token::Tag(tag)])
+            }
+            _ => self.attribute_value_unquoted(c),
+        }
     }
 
     fn attribute_value_double_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.36
+        match c {
+            Some('"') => {
+                self.state = State::AfterAttributeValueQuoted;
+                None
+            }
+            Some('&') => {
+                self.return_state = Some(State::AttributeValueDoubleQuoted);
+                self.state = State::CharacterReference;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.tag
+                    .as_mut()
+                    .unwrap()
+                    .append_to_cur_attr_value('\u{FFFD}');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
+                None
+            }
+        }
     }
 
     fn attribute_value_single_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.37
+        match c {
+            Some('\'') => {
+                self.state = State::AfterAttributeValueQuoted;
+                None
+            }
+            Some('&') => {
+                self.return_state = Some(State::AttributeValueSingleQuoted);
+                self.state = State::CharacterReference;
+                None
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.tag
+                    .as_mut()
+                    .unwrap()
+                    .append_to_cur_attr_value('\u{FFFD}');
+                None
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            Some(c) => {
+                self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
+                None
+            }
+        }
     }
 
     fn attribute_value_unquoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.38
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BeforeAttributeName;
+                return None;
+            }
+            Some('&') => {
+                self.return_state = Some(State::AttributeValueUnquoted);
+                self.state = State::CharacterReference;
+                return None;
+            }
+            Some('>') => {
+                self.state = State::Data;
+                let tag = self.tag.clone().unwrap();
+                self.tag = None;
+                return Some(vec![Token::Tag(tag)]);
+            }
+            Some('\0') => {
+                self.error(ParseHtmlError::UnexpectedNullCharacter);
+                self.tag
+                    .as_mut()
+                    .unwrap()
+                    .append_to_cur_attr_value('\u{FFFD}');
+                return None;
+            }
+            Some('"') | Some('\'') | Some('<') | Some('=') | Some('`') => {
+                self.error(ParseHtmlError::UnexpectedCharacterInUnquotedAttributeValue);
+                // treat as "anything else"
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                return Some(vec![HtmlTokenizer::eof_token()]);
+            }
+            _ => (),
+        }
+        self.tag
+            .as_mut()
+            .unwrap()
+            .append_to_cur_attr_value(c.unwrap());
+        None
     }
 
     fn after_attribute_value_quoted(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.39
+        match c {
+            Some(c) if ascii_whitespace(c as u32) => {
+                self.state = State::BeforeAttributeName;
+                None
+            }
+            Some('/') => {
+                self.state = State::SelfClosingStartTag;
+                None
+            }
+            Some('>') => {
+                self.state = State::Data;
+                let tag = self.tag.clone().unwrap();
+                self.tag = None;
+                Some(vec![Token::Tag(tag)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingWhitespaceBetweenAttributes);
+                self.before_attribute_name(c)
+            }
+        }
     }
 
     fn self_closing_start_tag(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.40
+        match c {
+            Some('>') => {
+                self.tag.as_mut().unwrap().set_self_closing_flag();
+                self.state = State::Data;
+                let tag = self.tag.clone().unwrap();
+                self.tag = None;
+                Some(vec![Token::Tag(tag)])
+            }
+            None => {
+                self.error(ParseHtmlError::EofInTag);
+                Some(vec![HtmlTokenizer::eof_token()])
+            }
+            _ => {
+                self.error(ParseHtmlError::UnexpectedSolidusInTag);
+                self.before_attribute_name(c)
+            }
+        }
     }
 
     fn bogus_comment(&mut self, c: Option<char>) -> Option<Vec<Token>> {

@@ -187,7 +187,7 @@ impl Clone for Doctype {
 
 pub struct Tag {
     pub name: String,
-    pub self_closing: Option<bool>,
+    pub self_closing: bool,
     pub is_end_tag: bool,
     pub attributes: Option<Vec<Attribute>>,
 }
@@ -196,10 +196,32 @@ impl Tag {
     pub fn new(end_tag: bool) -> Tag {
         Tag {
             name: "".into(),
-            self_closing: None,
+            self_closing: false,
             is_end_tag: end_tag,
             attributes: None,
         }
+    }
+
+    pub fn create_attribute(&mut self) {
+        // create the list if needed
+        if self.attributes.is_none() {
+            self.attributes = Some(vec![])
+        }
+        self.attributes.as_mut().unwrap().push(Attribute::new());
+    }
+
+    pub fn append_to_cur_attr_name(&mut self, c: char) {
+        let last = self.attributes.as_mut().unwrap().last_mut();
+        last.unwrap().name.push(c);
+    }
+
+    pub fn append_to_cur_attr_value(&mut self, c: char) {
+        let last = self.attributes.as_mut().unwrap().last_mut();
+        last.unwrap().value.push(c);
+    }
+
+    pub fn set_self_closing_flag(&mut self) {
+        self.self_closing = true;
     }
 }
 
