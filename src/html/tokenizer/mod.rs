@@ -31,7 +31,7 @@ use std::collections::VecDeque;
 
 pub struct HtmlTokenizer {
     html: LineCountingChars,
-    state: State,
+    pub state: State,
 
     return_state: Option<State>,
     last_emitted_tag: Option<Tag>,
@@ -109,7 +109,7 @@ impl HtmlTokenizer {
         buf
     }
 
-    // actual tokenization takes place below
+    // actual tokenization functions place below `impl Iterator for HtmlTokenizer`
 }
 
 impl Iterator for HtmlTokenizer {
@@ -124,108 +124,7 @@ impl Iterator for HtmlTokenizer {
 
         loop {
             let c = self.html.read();
-            let tokens = match self.state {
-                State::Data => self.data(c),
-                State::Rcdata => self.rcdata(c),
-                State::Rawtext => self.rawtext(c),
-                State::ScriptData => self.script_data(c),
-                State::Plaintext => self.plaintext(c),
-                State::TagOpen => self.tag_open(c),
-                State::EndTagOpen => self.end_tag_open(c),
-                State::TagName => self.tag_name(c),
-                State::RcdataLessThanSign => self.rcdata_less_than_sign(c),
-                State::RcdataEndTagOpen => self.rcdata_end_tag_open(c),
-                State::RcdataEndTagName => self.rcdata_end_tag_name(c),
-                State::RawtextLessThanSign => self.rawtext_less_than_sign(c),
-                State::RawtextEndTagOpen => self.rawtext_end_tag_open(c),
-                State::RawtextEndTagName => self.rawtext_end_tag_name(c),
-                State::ScriptDataLessThanSign => self.script_data_less_than_sign(c),
-                State::ScriptDataEndTagOpen => self.script_data_end_tag_open(c),
-                State::ScriptDataEndTagName => self.script_data_end_tag_name(c),
-                State::ScriptDataEscapeStart => self.script_data_escape_start(c),
-                State::ScriptDataEscapeStartDash => self.script_data_escape_start_dash(c),
-                State::ScriptDataEscaped => self.script_data_escaped(c),
-                State::ScriptDataEscapedDash => self.script_data_escaped_dash(c),
-                State::ScriptDataEscapedDashDash => self.script_data_escaped_dash_dash(c),
-                State::ScriptDataEscapedLessThanSign => self.script_data_escaped_less_than_sign(c),
-                State::ScriptDataEscapedEndTagOpen => self.script_data_end_tag_open(c),
-                State::ScriptDataEscapedEndTagName => self.script_data_end_tag_name(c),
-                State::ScriptDataDoubleEscapeStart => self.script_data_double_escape_start(c),
-                State::ScriptDataDoubleEscaped => self.script_data_double_escaped(c),
-                State::ScriptDataDoubleEscapedDash => self.script_data_double_escaped_dash(c),
-                State::ScriptDataDoubleEscapedDashDash => {
-                    self.script_data_double_escaped_dash_dash(c)
-                }
-                State::ScriptDataDoubleEscapedLessThanSign => {
-                    self.script_data_double_escaped_less_than_sign(c)
-                }
-                State::ScriptDataDoubleEscapeEnd => self.script_data_double_escape_end(c),
-                State::BeforeAttributeName => self.before_attribute_name(c),
-                State::AttributeName => self.attribute_name(c),
-                State::AfterAttributeName => self.after_attribute_name(c),
-                State::BeforeAttributeValue => self.before_attribute_value(c),
-                State::AttributeValueDoubleQuoted => self.attribute_value_double_quoted(c),
-                State::AttributeValueSingleQuoted => self.attribute_value_single_quoted(c),
-                State::AttributeValueUnquoted => self.attribute_value_unquoted(c),
-                State::AfterAttributeValueQuoted => self.after_attribute_value_quoted(c),
-                State::SelfClosingStartTag => self.self_closing_start_tag(c),
-                State::BogusComment => self.bogus_comment(c),
-                State::MarkupDeclarationOpen => self.markup_declaration_open(c),
-                State::CommentStart => self.comment_start(c),
-                State::CommentStartDash => self.comment_start_dash(c),
-                State::Comment => self.comment(c),
-                State::CommentLessThanSign => self.comment_less_than_sign(c),
-                State::CommentLessThanSignBang => self.comment_less_than_sign_bang(c),
-                State::CommentLessThanSignBangDash => self.comment_less_than_sign_bang_dash(c),
-                State::CommentLessThanSignBangDashDash => {
-                    self.comment_less_than_sign_bang_dash_dash(c)
-                }
-                State::CommentEndDash => self.comment_end_dash(c),
-                State::CommentEnd => self.comment_end(c),
-                State::CommentEndBang => self.comment_end_bang(c),
-                State::Doctype => self.doctype(c),
-                State::BeforeDoctypeName => self.before_doctype_name(c),
-                State::DoctypeName => self.doctype_name(c),
-                State::AfterDoctypeName => self.after_doctype_name(c),
-                State::AfterDoctypePublicKeyword => self.after_doctype_public_keyword(c),
-                State::BeforeDoctypePublicIdentifier => self.before_doctype_public_identifier(c),
-                State::DoctypePublicIdentifierDoubleQuoted => {
-                    self.doctype_public_identifier_double_quoted(c)
-                }
-                State::DoctypePublicIdentifierSingleQuoted => {
-                    self.doctype_public_identifier_single_quoted(c)
-                }
-                State::AfterDoctypePublicIdentifier => self.after_doctype_public_identifier(c),
-                State::BetweenDoctypePublicAndSystemIdentifiers => {
-                    self.between_doctype_public_and_system_identifiers(c)
-                }
-                State::AfterDoctypeSystemKeyword => self.after_doctype_system_keyword(c),
-                State::BeforeDoctypeSystemIdentifier => self.before_doctype_system_identifier(c),
-                State::DoctypeSystemIdentifierDoubleQuoted => {
-                    self.doctype_system_identifier_double_quoted(c)
-                }
-                State::DoctypeSystemIdentifierSingleQuoted => {
-                    self.doctype_system_identifier_single_quoted(c)
-                }
-                State::AfterDoctypeSystemIdentifier => self.after_doctype_system_identifier(c),
-                State::BogusDoctype => self.bogus_doctype(c),
-                State::CdataSection => self.cdata_section(c),
-                State::CdataSectionBracket => self.cdata_section_bracket(c),
-                State::CdataSectionEnd => self.cdata_section_end(c),
-                State::CharacterReference => self.character_reference(c),
-                State::NamedCharacterReference => self.named_character_reference(c),
-                State::AmbiguousAmpersand => self.ambiguous_ampersand(c),
-                State::NumericCharacterReference => self.numeric_character_reference(c),
-                State::HexadecimalCharacterReferenceStart => {
-                    self.hexadecimal_character_reference_start(c)
-                }
-                State::DecimalCharacterReferenceStart => self.decimal_character_reference_start(c),
-                State::HexadecimalCharacterReference => self.hexadecimal_character_reference(c),
-                State::DecimalCharacterReference => self.decimal_character_reference(c),
-                State::NumericCharacterReferenceEnd => self.numeric_character_reference_end(c),
-            };
-
-            match tokens {
+            match self.tokenize(self.state, c) {
                 Some(tokens) => {
                     if tokens.len() == 1 {
                         // if there's only one token, don't store it; just return it
@@ -245,6 +144,106 @@ impl Iterator for HtmlTokenizer {
 
 // implementation
 impl HtmlTokenizer {
+    fn tokenize(&mut self, state: State, c: Option<char>) -> Option<Vec<Token>> {
+        match state {
+            State::Data => self.data(c),
+            State::Rcdata => self.rcdata(c),
+            State::Rawtext => self.rawtext(c),
+            State::ScriptData => self.script_data(c),
+            State::Plaintext => self.plaintext(c),
+            State::TagOpen => self.tag_open(c),
+            State::EndTagOpen => self.end_tag_open(c),
+            State::TagName => self.tag_name(c),
+            State::RcdataLessThanSign => self.rcdata_less_than_sign(c),
+            State::RcdataEndTagOpen => self.rcdata_end_tag_open(c),
+            State::RcdataEndTagName => self.rcdata_end_tag_name(c),
+            State::RawtextLessThanSign => self.rawtext_less_than_sign(c),
+            State::RawtextEndTagOpen => self.rawtext_end_tag_open(c),
+            State::RawtextEndTagName => self.rawtext_end_tag_name(c),
+            State::ScriptDataLessThanSign => self.script_data_less_than_sign(c),
+            State::ScriptDataEndTagOpen => self.script_data_end_tag_open(c),
+            State::ScriptDataEndTagName => self.script_data_end_tag_name(c),
+            State::ScriptDataEscapeStart => self.script_data_escape_start(c),
+            State::ScriptDataEscapeStartDash => self.script_data_escape_start_dash(c),
+            State::ScriptDataEscaped => self.script_data_escaped(c),
+            State::ScriptDataEscapedDash => self.script_data_escaped_dash(c),
+            State::ScriptDataEscapedDashDash => self.script_data_escaped_dash_dash(c),
+            State::ScriptDataEscapedLessThanSign => self.script_data_escaped_less_than_sign(c),
+            State::ScriptDataEscapedEndTagOpen => self.script_data_end_tag_open(c),
+            State::ScriptDataEscapedEndTagName => self.script_data_end_tag_name(c),
+            State::ScriptDataDoubleEscapeStart => self.script_data_double_escape_start(c),
+            State::ScriptDataDoubleEscaped => self.script_data_double_escaped(c),
+            State::ScriptDataDoubleEscapedDash => self.script_data_double_escaped_dash(c),
+            State::ScriptDataDoubleEscapedDashDash => self.script_data_double_escaped_dash_dash(c),
+            State::ScriptDataDoubleEscapedLessThanSign => {
+                self.script_data_double_escaped_less_than_sign(c)
+            }
+            State::ScriptDataDoubleEscapeEnd => self.script_data_double_escape_end(c),
+            State::BeforeAttributeName => self.before_attribute_name(c),
+            State::AttributeName => self.attribute_name(c),
+            State::AfterAttributeName => self.after_attribute_name(c),
+            State::BeforeAttributeValue => self.before_attribute_value(c),
+            State::AttributeValueDoubleQuoted => self.attribute_value_double_quoted(c),
+            State::AttributeValueSingleQuoted => self.attribute_value_single_quoted(c),
+            State::AttributeValueUnquoted => self.attribute_value_unquoted(c),
+            State::AfterAttributeValueQuoted => self.after_attribute_value_quoted(c),
+            State::SelfClosingStartTag => self.self_closing_start_tag(c),
+            State::BogusComment => self.bogus_comment(c),
+            State::MarkupDeclarationOpen => self.markup_declaration_open(c),
+            State::CommentStart => self.comment_start(c),
+            State::CommentStartDash => self.comment_start_dash(c),
+            State::Comment => self.comment(c),
+            State::CommentLessThanSign => self.comment_less_than_sign(c),
+            State::CommentLessThanSignBang => self.comment_less_than_sign_bang(c),
+            State::CommentLessThanSignBangDash => self.comment_less_than_sign_bang_dash(c),
+            State::CommentLessThanSignBangDashDash => self.comment_less_than_sign_bang_dash_dash(c),
+            State::CommentEndDash => self.comment_end_dash(c),
+            State::CommentEnd => self.comment_end(c),
+            State::CommentEndBang => self.comment_end_bang(c),
+            State::Doctype => self.doctype(c),
+            State::BeforeDoctypeName => self.before_doctype_name(c),
+            State::DoctypeName => self.doctype_name(c),
+            State::AfterDoctypeName => self.after_doctype_name(c),
+            State::AfterDoctypePublicKeyword => self.after_doctype_public_keyword(c),
+            State::BeforeDoctypePublicIdentifier => self.before_doctype_public_identifier(c),
+            State::DoctypePublicIdentifierDoubleQuoted => {
+                self.doctype_public_identifier_double_quoted(c)
+            }
+            State::DoctypePublicIdentifierSingleQuoted => {
+                self.doctype_public_identifier_single_quoted(c)
+            }
+            State::AfterDoctypePublicIdentifier => self.after_doctype_public_identifier(c),
+            State::BetweenDoctypePublicAndSystemIdentifiers => {
+                self.between_doctype_public_and_system_identifiers(c)
+            }
+            State::AfterDoctypeSystemKeyword => self.after_doctype_system_keyword(c),
+            State::BeforeDoctypeSystemIdentifier => self.before_doctype_system_identifier(c),
+            State::DoctypeSystemIdentifierDoubleQuoted => {
+                self.doctype_system_identifier_double_quoted(c)
+            }
+            State::DoctypeSystemIdentifierSingleQuoted => {
+                self.doctype_system_identifier_single_quoted(c)
+            }
+            State::AfterDoctypeSystemIdentifier => self.after_doctype_system_identifier(c),
+            State::BogusDoctype => self.bogus_doctype(c),
+            State::CdataSection => self.cdata_section(c),
+            State::CdataSectionBracket => self.cdata_section_bracket(c),
+            State::CdataSectionEnd => self.cdata_section_end(c),
+            State::CharacterReference => self.character_reference(c),
+            State::NamedCharacterReference => self.named_character_reference(c),
+            State::AmbiguousAmpersand => self.ambiguous_ampersand(c),
+            State::NumericCharacterReference => self.numeric_character_reference(c),
+            State::HexadecimalCharacterReferenceStart => {
+                self.hexadecimal_character_reference_start(c)
+            }
+            State::DecimalCharacterReferenceStart => self.decimal_character_reference_start(c),
+            State::HexadecimalCharacterReference => self.hexadecimal_character_reference(c),
+            State::DecimalCharacterReference => self.decimal_character_reference(c),
+            State::NumericCharacterReferenceEnd => self.numeric_character_reference_end(c),
+        };
+        unreachable!();
+    }
+
     fn data(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.1
         match c {
@@ -2206,10 +2205,24 @@ impl HtmlTokenizer {
     }
 
     fn character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.72
+        self.temp_buf = "&".into();
+        match c {
+            Some(c) if ascii_alphanumeric(c as u32) => self.named_character_reference(Some(c)),
+            Some('#') => {
+                self.temp_buf.push('#');
+                self.state = State::NumericCharacterReference;
+                None
+            }
+            _ => {
+                // TODO: flush code points consumed as a character reference
+                self.tokenize(*self.return_state.as_ref().unwrap(), c)
+            }
+        }
     }
 
     fn named_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+        // section 12.2.5.73
         unreachable!()
     }
 

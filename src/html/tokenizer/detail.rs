@@ -266,6 +266,7 @@ pub enum Token {
     Tag(Tag),
 }
 
+#[derive(Copy, Clone)]
 pub enum State {
     Data,
     Rcdata,
