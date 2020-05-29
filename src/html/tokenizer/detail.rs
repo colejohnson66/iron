@@ -22,6 +22,7 @@
  */
 // Implements <https://html.spec.whatwg.org/multipage/parsing.html#tokenization>
 use std::char;
+use std::collections::HashMap;
 
 pub struct LineCountingChars {
     contents: Vec<char>,
@@ -238,6 +239,11 @@ impl Tag {
     pub fn append_to_cur_attr_value(&mut self, c: char) {
         let last = self.attributes.as_mut().unwrap().last_mut();
         last.unwrap().value.push(c);
+    }
+
+    pub fn append_to_cur_attr_value_str(&mut self, chars: &str) {
+        let last = self.attributes.as_mut().unwrap().last_mut();
+        last.unwrap().value.push_str(chars);
     }
 
     pub fn set_self_closing_flag(&mut self) {

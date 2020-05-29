@@ -27,7 +27,7 @@ use crate::html::parser::detail::ParseHtmlError;
 use crate::html::tokenizer::detail::*;
 use crate::infra::*;
 use std::char;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 pub struct HtmlTokenizer {
     html: LineCountingChars,
@@ -84,12 +84,15 @@ impl HtmlTokenizer {
         // TODO: call a callback
     }
 
-    fn in_attr_state(return_state: State) -> bool {
-        match return_state {
-            State::AttributeValueDoubleQuoted => true,
-            State::AttributeValueSingleQuoted => true,
-            State::AttributeValueUnquoted => true,
-            _ => false,
+    fn consumed_as_part_of_attribute(&mut self) -> bool {
+        match self.return_state {
+            Some(state) => match state {
+                State::AttributeValueDoubleQuoted => true,
+                State::AttributeValueSingleQuoted => true,
+                State::AttributeValueUnquoted => true,
+                _ => false,
+            },
+            None => false,
         }
     }
 
@@ -2223,34 +2226,198 @@ impl HtmlTokenizer {
 
     fn named_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.73
-        unreachable!()
+        // TODO: implement
+        panic!();
     }
 
     fn ambiguous_ampersand(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.74
+        match c {
+            Some(c) if ascii_alphanumeric(c as u32) => {
+                if self.consumed_as_part_of_attribute() {
+                    self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
+                    return None;
+                }
+                Some(vec![HtmlTokenizer::char_token(c)])
+            }
+            Some(';') => {
+                self.error(ParseHtmlError::UnknownNamedCharacterReference);
+                self.tokenize(*self.return_state.as_ref().unwrap(), Some(';'))
+            }
+            _ => self.tokenize(*self.return_state.as_ref().unwrap(), c),
+        }
     }
 
     fn numeric_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.75
+        self.char_ref_code = 0;
+        match c {
+            Some('X') | Some('x') => {
+                self.temp_buf.push(c.unwrap());
+                self.state = State::HexadecimalCharacterReferenceStart;
+                None
+            }
+            _ => self.decimal_character_reference_start(c),
+        }
     }
 
     fn hexadecimal_character_reference_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.76
+        match c {
+            Some(c) if ascii_hex_digit(c as u32) => self.hexadecimal_character_reference(Some(c)),
+            _ => {
+                self.error(ParseHtmlError::AbsenseOfDigitsInNumericCharacterReference);
+                // TODO: flush code points consumed as a character reference
+                self.tokenize(*self.return_state.as_ref().unwrap(), c)
+            }
+        }
     }
 
     fn decimal_character_reference_start(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.77
+        match c {
+            Some(c) if ascii_digit(c as u32) => self.decimal_character_reference(Some(c)),
+            _ => {
+                self.error(ParseHtmlError::AbsenseOfDigitsInNumericCharacterReference);
+                // TODO: flush code points consumed as a character reference
+                self.tokenize(*self.return_state.as_ref().unwrap(), c)
+            }
+        }
     }
 
     fn hexadecimal_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.78
+        match c {
+            Some(c) if ascii_digit(c as u32) => {
+                self.char_ref_code *= 16;
+                self.char_ref_code += (c as u32) - 0x30;
+                None
+            }
+            Some(c) if ascii_upper_hex_digit(c as u32) => {
+                self.char_ref_code *= 16;
+                self.char_ref_code += (c as u32) - 0x37;
+                None
+            }
+            Some(c) if ascii_lower_hex_digit(c as u32) => {
+                self.char_ref_code *= 16;
+                self.char_ref_code += (c as u32) - 0x57;
+                None
+            }
+            Some(';') => {
+                self.state = State::NumericCharacterReferenceEnd;
+                None
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingSemicolonAfterCharacterReference);
+                self.numeric_character_reference_end(c)
+            }
+        }
     }
 
     fn decimal_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.79
+        match c {
+            Some(c) if ascii_digit(c as u32) => {
+                self.char_ref_code *= 10;
+                self.char_ref_code += (c as u32) - 0x30;
+                None
+            }
+            Some(';') => {
+                self.state = State::NumericCharacterReferenceEnd;
+                None
+            }
+            _ => {
+                self.error(ParseHtmlError::MissingSemicolonAfterCharacterReference);
+                self.numeric_character_reference_end(c)
+            }
+        }
     }
 
     fn numeric_character_reference_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
-        unreachable!()
+        // section 12.2.5.80
+
+        // don't consume a character here
+        if c.is_some() {
+            self.html.backtrack();
+        }
+
+        // build character map
+        let mut map: HashMap<u32, u32> = HashMap::new();
+        map.insert(0x80, 0x20AC);
+        map.insert(0x82, 0x201A);
+        map.insert(0x83, 0x0192);
+        map.insert(0x84, 0x201E);
+        map.insert(0x85, 0x2026);
+        map.insert(0x86, 0x2020);
+        map.insert(0x87, 0x2021);
+        map.insert(0x88, 0x02C6);
+        map.insert(0x89, 0x2030);
+        map.insert(0x8A, 0x0160);
+        map.insert(0x8B, 0x2039);
+        map.insert(0x8C, 0x0152);
+        map.insert(0x8E, 0x017D);
+        map.insert(0x91, 0x2018);
+        map.insert(0x92, 0x2019);
+        map.insert(0x93, 0x201C);
+        map.insert(0x94, 0x201D);
+        map.insert(0x95, 0x2022);
+        map.insert(0x96, 0x2013);
+        map.insert(0x97, 0x2014);
+        map.insert(0x98, 0x02DC);
+        map.insert(0x99, 0x2122);
+        map.insert(0x9A, 0x0161);
+        map.insert(0x9B, 0x203A);
+        map.insert(0x9C, 0x0153);
+        map.insert(0x9E, 0x017E);
+        map.insert(0x9F, 0x0178);
+
+        match self.char_ref_code.clone() {
+            0 => {
+                self.error(ParseHtmlError::NullCharacterReference);
+                self.char_ref_code = 0xFFFD;
+            }
+            n if n > 0x10FFFF => {
+                self.error(ParseHtmlError::CharacterReferenceOutsideUnicodeRange);
+                self.char_ref_code = 0xFFFD;
+            }
+            n if surrogate(n) => {
+                self.error(ParseHtmlError::SurrogateCharacterReference);
+                self.char_ref_code = 0xFFFD;
+            }
+            n if noncharacter(n) => {
+                self.error(ParseHtmlError::NoncharacterCharacterReference);
+            }
+            n if n == 0xD || (control(n) && !ascii_whitespace(n)) => {
+                self.error(ParseHtmlError::ControlCharacterReference);
+                match map.get(&self.char_ref_code) {
+                    Some(new_ref_code) => self.char_ref_code = *new_ref_code,
+                    None => (),
+                }
+            }
+            _ => (),
+        }
+
+        // NOTE: will panic on invalid character!
+        // TODO: will that happen?
+        self.temp_buf = "".into();
+        self.temp_buf
+            .push(char::from_u32(self.char_ref_code).unwrap());
+
+        let mut ret: Option<Vec<Token>> = None;
+
+        // flush code points consumed as a character reference
+        if self.consumed_as_part_of_attribute() {
+            self.tag
+                .as_mut()
+                .unwrap()
+                .append_to_cur_attr_value_str(&self.temp_buf);
+        } else {
+            ret = Some(self.temp_buf_to_tokens());
+        }
+
+        self.state = self.return_state.unwrap();
+        self.return_state = None;
+
+        ret
     }
 }
