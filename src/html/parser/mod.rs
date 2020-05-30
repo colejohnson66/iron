@@ -25,6 +25,7 @@ pub mod quirks;
 
 use crate::html::element::Node;
 use crate::html::parser::detail::*;
+use crate::html::tokenizer::detail::*;
 
 pub struct HtmlParser {
     character_encoding: Option<EncodingCertainty>,
@@ -47,7 +48,7 @@ pub struct HtmlParser {
 }
 
 impl HtmlParser {
-    fn new() -> HtmlParser {
+    pub fn new() -> HtmlParser {
         HtmlParser {
             character_encoding: None,
             insertion_mode: InsertionMode::Initial,
@@ -63,4 +64,58 @@ impl HtmlParser {
             parser_pause_flag: false,
         }
     }
+
+    fn start_tag_with_name(tag: &Tag, tag_name: &str) -> bool {
+        &tag.name[..] == tag_name && !tag.is_end_tag
+    }
+
+    fn start_tag_with_names(tag: &Tag, tag_names: Vec<&str>) -> bool {
+        if tag.is_end_tag {
+            return false;
+        }
+
+        let tag = &tag.name[..];
+        for name in tag_names {
+            if tag == name {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn end_tag_with_name(tag: &Tag, tag_name: &str) -> bool {
+        &tag.name[..] == tag_name && tag.is_end_tag
+    }
+
+    fn end_tag_with_names(tag: &Tag, tag_names: Vec<&str>) -> bool {
+        if !tag.is_end_tag {
+            return false;
+        }
+
+        let tag = &tag.name[..];
+        for name in tag_names {
+            if tag == name {
+                return true;
+            }
+        }
+        false
+    }
+
+    // TODO: appropriate place for inserting a node
+
+    // TODO: create element for token
+
+    // TODO: insert a foreign element
+
+    // TODO: adjust MathML attributes
+
+    // TODO: adjust SVG attributes
+
+    // TODO: adjust foreign attributes
+
+    // TODO: insert a character
+
+    // TODO: insert a comment
+
+    // TODO: more
 }
