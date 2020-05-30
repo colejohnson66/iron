@@ -22,7 +22,6 @@
  */
 // Implements <https://html.spec.whatwg.org/multipage/parsing.html#tokenization>
 use std::char;
-use std::collections::HashMap;
 
 pub struct LineCountingChars {
     contents: Vec<char>,

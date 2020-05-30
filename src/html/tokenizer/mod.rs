@@ -2224,9 +2224,11 @@ impl HtmlTokenizer {
         }
     }
 
-    fn named_character_reference(&mut self, c: Option<char>) -> Option<Vec<Token>> {
+    fn named_character_reference(&mut self, _c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.73
         // TODO: implement
+        // see https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
+        // see https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
         panic!();
     }
 
