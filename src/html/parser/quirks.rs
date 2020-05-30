@@ -41,7 +41,7 @@ const VALID_SYSTEM_ID: &'static str = "about:legacy-compat";
 
 const QUIRKS_MODE_SYSTEM_ID: &'static str =
     "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd";
-const QUIRKS_MODE_PUBLIC_ID_PREFIXES: &[&str] = &[
+const QUIRKS_MODE_PUBLIC_ID_PREFIXES: &'static [&'static str] = &[
     "+//silmaril//dtd html pro v0r11 19970101//",
     "-//as//dtd html 3.0 aswedit + extensions//",
     "-//advasoft ltd//dtd html 3.0 aswedit + extensions//",
@@ -98,7 +98,7 @@ const QUIRKS_MODE_PUBLIC_ID_PREFIXES: &[&str] = &[
     "-//webtechs//dtd mozilla html 2.0//",
     "-//webtechs//dtd mozilla html//",
 ];
-const QUIRKS_MODE_NO_SYSTEM_ID_PUBLIC_ID_PREFIXES: &[&str] = &[
+const QUIRKS_MODE_NO_SYSTEM_ID_PUBLIC_ID_PREFIXES: &'static [&'static str] = &[
     "+//silmaril//dtd html pro v0r11 19970101//",
     "-//as//dtd html 3.0 aswedit + extensions//",
     "-//advasoft ltd//dtd html 3.0 aswedit + extensions//",
@@ -157,17 +157,17 @@ const QUIRKS_MODE_NO_SYSTEM_ID_PUBLIC_ID_PREFIXES: &[&str] = &[
     "-//w3c//dtd html 4.01 frameset//",     // NEW
     "-//w3c//dtd html 4.01 transitional//", // NEW
 ];
-const QUIRKS_MODE_PUBLIC_IDS: &[&str] = &[
+const QUIRKS_MODE_PUBLIC_IDS: &'static [&'static str] = &[
     "-//w3o//dtd w3 html strict 3.0//en//",
     "-/w3c/dtd html 4.0 transitional/en",
     "html",
 ];
 
-const LIMITED_QUIRKS_PUBLIC_ID_PREFIXES: &[&str] = &[
+const LIMITED_QUIRKS_PUBLIC_ID_PREFIXES: &'static [&'static str] = &[
     "-//w3c//dtd xhtml 1.0 frameset//",
     "-//w3c//dtd xhtml 1.0 transitional//",
 ];
-const LIMITED_QUIRKS_WITH_SYSTEM_ID_PUBLIC_ID_PREFIXES: &[&str] = &[
+const LIMITED_QUIRKS_WITH_SYSTEM_ID_PUBLIC_ID_PREFIXES: &'static [&'static str] = &[
     "-//w3c//dtd xhtml 1.0 frameset//",
     "-//w3c//dtd xhtml 1.0 transitional//",
     "-//w3c//dtd html 4.01 frameset//",     // NEW

@@ -23,45 +23,55 @@
 pub mod detail;
 pub mod quirks;
 
-use crate::html::element::Node;
+use crate::html::element::*;
 use crate::html::parser::detail::*;
 use crate::html::tokenizer::detail::*;
+use crate::infra::namespace::Namespace;
 
 pub struct HtmlParser {
     character_encoding: Option<EncodingCertainty>,
 
+    document: RcDom,
+
     insertion_mode: InsertionMode,
     orig_insertion_mode: Option<InsertionMode>,
 
-    open_elements_stack: Vec<Node>,
-    active_formatting_elements: Vec<Node>,
-    head_element_pointer: Option<Node>,
-    form_element_pointer: Option<Node>,
+    open_elements_stack: Vec<Handle>,
+    active_formatting_elements: Vec<Handle>,
+    head_elem: Option<Handle>,
+    form_elem: Option<Handle>,
 
     scripting: bool,
     frameset_ok: bool,
 
     template_insertion_modes: Vec<InsertionMode>,
 
+    foster_parenting: bool,
+
     script_nesting_level: u32,
-    pub parser_pause_flag: bool,
+    parser_pause_flag: bool,
+
+    context_elem: Option<Handle>,
 }
 
 impl HtmlParser {
     pub fn new() -> HtmlParser {
         HtmlParser {
             character_encoding: None,
+            document: RcDom::new(),
             insertion_mode: InsertionMode::Initial,
             orig_insertion_mode: None,
             open_elements_stack: vec![],
             active_formatting_elements: vec![],
-            head_element_pointer: None,
-            form_element_pointer: None,
+            head_elem: None,
+            form_elem: None,
             scripting: true,
             frameset_ok: true,
             template_insertion_modes: vec![],
+            foster_parenting: false,
             script_nesting_level: 0,
             parser_pause_flag: false,
+            context_elem: None,
         }
     }
 
@@ -101,6 +111,79 @@ impl HtmlParser {
         false
     }
 
+    fn elem_name(&self, target: &Handle) -> ExpandedName {
+        match target.data {
+            NodeData::Element { ref name, .. } => ExpandedName {
+                ns: name.ns.clone(),
+                local: name.local.clone(),
+            },
+            _ => panic!(),
+        }
+    }
+
+    fn html_elem_named(&self, elem: &Handle, name: &str) -> bool {
+        let expanded = self.elem_name(elem);
+        expanded.ns == Namespace::Html && &expanded.local[..] == name
+    }
+
+    // https://html.spec.whatwg.org/multipage/parsing.html#reset-the-insertion-mode-appropriately
+    fn reset_insertion_mode(&mut self) -> InsertionMode {
+        for (i, mut node) in self.open_elements_stack.iter().enumerate().rev() {
+            let last = i == 0usize;
+            if last {
+                match self.context_elem.as_ref() {
+                    Some(ctx) => node = ctx,
+                    _ => (),
+                }
+            }
+
+            let name = match self.elem_name(node) {
+                ExpandedName { ns, local } => match ns {
+                    Namespace::Html => local,
+                    _ => continue,
+                },
+            };
+            match &name[..] {
+                "select" => {
+                    for ancestor in self.open_elements_stack[0..i].iter().rev() {
+                        if self.html_elem_named(ancestor, "template") {
+                            return InsertionMode::InSelect;
+                        } else if self.html_elem_named(ancestor, "table") {
+                            return InsertionMode::InSelectInTable;
+                        }
+                    }
+                    return InsertionMode::InSelect;
+                }
+                "td" | "th" => {
+                    if !last {
+                        return InsertionMode::InCell;
+                    }
+                }
+                "tr" => return InsertionMode::InRow,
+                "tbody" | "thead" | "tfoot" => return InsertionMode::InTableBody,
+                "caption" => return InsertionMode::InCaption,
+                "colgroup" => return InsertionMode::InColumnGroup,
+                "table" => return InsertionMode::InTable,
+                "template" => return *self.template_insertion_modes.last().unwrap(),
+                "head" => {
+                    if !last {
+                        return InsertionMode::InHead;
+                    }
+                }
+                "body" => return InsertionMode::InBody,
+                "frameset" => return InsertionMode::InFrameset,
+                "html" => {
+                    return match self.head_elem {
+                        None => InsertionMode::BeforeHead,
+                        Some(_) => InsertionMode::AfterHead,
+                    }
+                }
+                _ => (),
+            }
+        }
+        InsertionMode::InBody
+    }
+
     // TODO: appropriate place for inserting a node
 
     // TODO: create element for token
@@ -118,4 +201,13 @@ impl HtmlParser {
     // TODO: insert a comment
 
     // TODO: more
+}
+
+impl HtmlParser {
+    fn tree_construction_dispatcher(&mut self, _tok: Token) {
+        let mut _foreign_content = true;
+        if self.open_elements_stack.is_empty() {
+            _foreign_content = true;
+        }
+    }
 }

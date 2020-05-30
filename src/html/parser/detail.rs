@@ -74,6 +74,7 @@ pub enum ParseHtmlError {
     UnknownNamedCharacterReference,
 }
 
+#[derive(Copy, Clone)]
 pub enum InsertionMode {
     Initial,
     BeforeHtml,
