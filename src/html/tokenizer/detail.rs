@@ -25,9 +25,9 @@ use std::char;
 
 pub struct LineCountingChars {
     contents: Vec<char>,
-    pos: usize,
-    line: u32,
-    line_pos: u32,
+    pub pos: usize,
+    pub line: u32,
+    pub line_pos: u32,
 }
 
 impl LineCountingChars {
@@ -257,6 +257,23 @@ impl Clone for Tag {
             self_closing: self.self_closing.clone(),
             is_end_tag: self.is_end_tag,
             attributes: self.attributes.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct TokenMetadata {
+    pub file_offset: usize,
+    pub line: u32,
+    pub line_offset: u32,
+}
+
+impl TokenMetadata {
+    pub fn new(file_offset: usize, line: u32, line_offset: u32) -> TokenMetadata {
+        TokenMetadata {
+            file_offset,
+            line,
+            line_offset,
         }
     }
 }

@@ -62,24 +62,6 @@ impl HtmlTokenizer {
         }
     }
 
-    fn char_token(c: char) -> Token {
-        Token::Character(c)
-    }
-    fn null_char_token() -> Token {
-        Token::Character('\0')
-    }
-    fn replacement_char_token() -> Token {
-        Token::Character(char::REPLACEMENT_CHARACTER)
-    }
-    fn eof_token() -> Token {
-        Token::Eof
-    }
-
-    fn lowercase_char_from_ascii_upper(c: char) -> char {
-        // TODO: assert `c` is ascii upper
-        char::from_u32((c as u32) + 0x20).unwrap()
-    }
-
     fn error(&mut self, _err: ParseHtmlError) {
         // TODO: call a callback
     }
@@ -107,7 +89,7 @@ impl HtmlTokenizer {
     fn temp_buf_to_tokens(&mut self) -> Vec<Token> {
         let mut buf: Vec<Token> = Vec::with_capacity(32);
         for c in self.temp_buf.chars() {
-            buf.push(HtmlTokenizer::char_token(c))
+            buf.push(Token::Character(c))
         }
         buf
     }
@@ -261,10 +243,10 @@ impl HtmlTokenizer {
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::char_token('\0')])
+                Some(vec![Token::Character('\0')])
             }
-            None => Some(vec![HtmlTokenizer::eof_token()]),
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            None => Some(vec![Token::Eof]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -282,10 +264,10 @@ impl HtmlTokenizer {
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
-            None => Some(vec![HtmlTokenizer::eof_token()]),
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            None => Some(vec![Token::Eof]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -298,10 +280,10 @@ impl HtmlTokenizer {
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
-            None => Some(vec![HtmlTokenizer::eof_token()]),
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            None => Some(vec![Token::Eof]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -314,10 +296,10 @@ impl HtmlTokenizer {
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
-            None => Some(vec![HtmlTokenizer::eof_token()]),
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            None => Some(vec![Token::Eof]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -326,10 +308,10 @@ impl HtmlTokenizer {
         match c {
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
-            None => Some(vec![HtmlTokenizer::eof_token()]),
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            None => Some(vec![Token::Eof]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -353,13 +335,10 @@ impl HtmlTokenizer {
                 self.comment = Some(Comment::new());
                 self.bogus_comment(c)
             }
-            None => Some(vec![
-                HtmlTokenizer::char_token('<'),
-                HtmlTokenizer::eof_token(),
-            ]),
+            None => Some(vec![Token::Character('<'), Token::Eof]),
             Some(c) => {
                 self.error(ParseHtmlError::InvalidFirstCharacterOfTagName);
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self.data(Some(c)).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -382,9 +361,9 @@ impl HtmlTokenizer {
             None => {
                 self.error(ParseHtmlError::EofBeforeTagName);
                 Some(vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('/'),
-                    HtmlTokenizer::eof_token(),
+                    Token::Character('<'),
+                    Token::Character('/'),
+                    Token::Eof,
                 ])
             }
             Some(c) => {
@@ -414,8 +393,7 @@ impl HtmlTokenizer {
                 }
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().name.push(c);
+                self.tag.as_mut().unwrap().name.push(c.to_ascii_lowercase());
                 None
             }
             Some('\0') => {
@@ -425,7 +403,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.tag.as_mut().unwrap().name.push(c);
@@ -443,7 +421,7 @@ impl HtmlTokenizer {
                 None
             }
             _ => {
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self.rcdata(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -459,10 +437,7 @@ impl HtmlTokenizer {
                 self.rcdata_end_tag_name(Some(c))
             }
             _ => {
-                let mut tok = vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('/'),
-                ];
+                let mut tok = vec![Token::Character('<'), Token::Character('/')];
                 let mut reconsumed = self.rcdata(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -497,8 +472,7 @@ impl HtmlTokenizer {
                 // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.tag.as_mut().unwrap().name.push(c.to_ascii_lowercase());
                 self.temp_buf.push(c);
                 return None;
             }
@@ -509,10 +483,7 @@ impl HtmlTokenizer {
             }
             _ => (),
         }
-        let mut tok = vec![
-            HtmlTokenizer::char_token('<'),
-            HtmlTokenizer::char_token('/'),
-        ];
+        let mut tok = vec![Token::Character('<'), Token::Character('/')];
         tok.append(&mut self.temp_buf_to_tokens());
         let mut reconsumed = self.rcdata(c).unwrap_or_default();
         tok.append(&mut reconsumed);
@@ -528,7 +499,7 @@ impl HtmlTokenizer {
                 None
             }
             _ => {
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self.rawtext(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -544,10 +515,7 @@ impl HtmlTokenizer {
                 self.rawtext_end_tag_name(Some(c))
             }
             _ => {
-                let mut tok = vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('/'),
-                ];
+                let mut tok = vec![Token::Character('<'), Token::Character('/')];
                 let mut reconsumed = self.rawtext(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -580,8 +548,7 @@ impl HtmlTokenizer {
                 // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.tag.as_mut().unwrap().name.push(c.to_ascii_lowercase());
                 self.temp_buf.push(c);
                 return None;
             }
@@ -592,10 +559,7 @@ impl HtmlTokenizer {
             }
             _ => (),
         }
-        let mut tok = vec![
-            HtmlTokenizer::char_token('<'),
-            HtmlTokenizer::char_token('/'),
-        ];
+        let mut tok = vec![Token::Character('<'), Token::Character('/')];
         tok.append(&mut self.temp_buf_to_tokens());
         let mut reconsumed = self.rawtext(c).unwrap_or_default();
         tok.append(&mut reconsumed);
@@ -612,13 +576,10 @@ impl HtmlTokenizer {
             }
             Some('!') => {
                 self.state = State::ScriptDataEscapeStart;
-                Some(vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('!'),
-                ])
+                Some(vec![Token::Character('<'), Token::Character('!')])
             }
             _ => {
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self.script_data(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -634,10 +595,7 @@ impl HtmlTokenizer {
                 self.script_data_end_tag_name(Some(c))
             }
             _ => {
-                let mut tok = vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('/'),
-                ];
+                let mut tok = vec![Token::Character('<'), Token::Character('/')];
                 let mut reconsumed = self.script_data(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -673,8 +631,7 @@ impl HtmlTokenizer {
                 // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.tag.as_mut().unwrap().name.push(c.to_ascii_lowercase());
                 self.temp_buf.push(c);
                 return None;
             }
@@ -685,10 +642,7 @@ impl HtmlTokenizer {
             }
             _ => (),
         }
-        let mut tok = vec![
-            HtmlTokenizer::char_token('<'),
-            HtmlTokenizer::char_token('/'),
-        ];
+        let mut tok = vec![Token::Character('<'), Token::Character('/')];
         tok.append(&mut self.temp_buf_to_tokens());
         let mut reconsumed = self.script_data(c).unwrap_or_default();
         tok.append(&mut reconsumed);
@@ -700,7 +654,7 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataEscapeStartDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             _ => self.script_data(c),
         }
@@ -711,7 +665,7 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataEscapedDashDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             _ => self.script_data(c),
         }
@@ -722,7 +676,7 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataEscapedDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             Some('<') => {
                 self.state = State::ScriptDataEscapedLessThanSign;
@@ -730,13 +684,13 @@ impl HtmlTokenizer {
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -745,7 +699,7 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataEscapedDashDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             Some('<') => {
                 self.state = State::ScriptDataEscapedLessThanSign;
@@ -754,15 +708,15 @@ impl HtmlTokenizer {
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
                 self.state = State::ScriptDataEscaped;
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.state = State::ScriptDataEscaped;
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
         }
     }
@@ -770,27 +724,27 @@ impl HtmlTokenizer {
     fn script_data_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.22
         match c {
-            Some('-') => Some(vec![HtmlTokenizer::char_token('-')]),
+            Some('-') => Some(vec![Token::Character('-')]),
             Some('<') => {
                 self.state = State::ScriptDataEscapedLessThanSign;
                 None
             }
             Some('>') => {
                 self.state = State::ScriptData;
-                Some(vec![HtmlTokenizer::char_token('>')])
+                Some(vec![Token::Character('>')])
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
                 self.state = State::ScriptDataEscaped;
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.state = State::ScriptDataEscaped;
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
         }
     }
@@ -805,7 +759,7 @@ impl HtmlTokenizer {
             }
             Some(c) if ascii_alpha(c as u32) => {
                 self.temp_buf = "".into();
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self
                     .script_data_double_escape_start(Some(c))
                     .unwrap_or_default();
@@ -813,7 +767,7 @@ impl HtmlTokenizer {
                 Some(tok)
             }
             _ => {
-                let mut tok = vec![HtmlTokenizer::char_token('<')];
+                let mut tok = vec![Token::Character('<')];
                 let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -829,10 +783,7 @@ impl HtmlTokenizer {
                 self.script_data_escaped_end_tag_name(Some(c))
             }
             _ => {
-                let mut tok = vec![
-                    HtmlTokenizer::char_token('<'),
-                    HtmlTokenizer::char_token('/'),
-                ];
+                let mut tok = vec![Token::Character('<'), Token::Character('/')];
                 let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -868,8 +819,7 @@ impl HtmlTokenizer {
                 // otherwise treat as "anything else"
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().name.push(lower_c);
+                self.tag.as_mut().unwrap().name.push(c.to_ascii_lowercase());
                 self.temp_buf.push(c);
                 return None;
             }
@@ -880,10 +830,7 @@ impl HtmlTokenizer {
             }
             _ => (),
         }
-        let mut tok = vec![
-            HtmlTokenizer::char_token('<'),
-            HtmlTokenizer::char_token('/'),
-        ];
+        let mut tok = vec![Token::Character('<'), Token::Character('/')];
         tok.append(&mut self.temp_buf_to_tokens());
         let mut reconsumed = self.script_data_escaped(c).unwrap_or_default();
         tok.append(&mut reconsumed);
@@ -899,16 +846,15 @@ impl HtmlTokenizer {
                 } else {
                     self.state = State::ScriptDataEscaped;
                 }
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.temp_buf.push(lower_c);
-                Some(vec![HtmlTokenizer::char_token(c)])
+                self.temp_buf.push(c.to_ascii_lowercase());
+                Some(vec![Token::Character(c)])
             }
             Some(c) if ascii_lower_alpha(c as u32) => {
                 self.temp_buf.push(c);
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
             _ => self.script_data_escaped(c),
         }
@@ -919,21 +865,21 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataDoubleEscapedDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             Some('<') => {
                 self.state = State::ScriptDataDoubleEscapedLessThanSign;
-                Some(vec![HtmlTokenizer::char_token('<')])
+                Some(vec![Token::Character('<')])
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -942,24 +888,24 @@ impl HtmlTokenizer {
         match c {
             Some('-') => {
                 self.state = State::ScriptDataDoubleEscapedDashDash;
-                Some(vec![HtmlTokenizer::char_token('-')])
+                Some(vec![Token::Character('-')])
             }
             Some('<') => {
                 self.state = State::ScriptDataDoubleEscapedLessThanSign;
-                Some(vec![HtmlTokenizer::char_token('<')])
+                Some(vec![Token::Character('<')])
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
                 self.state = State::ScriptDataDoubleEscaped;
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.state = State::ScriptDataDoubleEscaped;
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
         }
     }
@@ -967,27 +913,27 @@ impl HtmlTokenizer {
     fn script_data_double_escaped_dash_dash(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.29
         match c {
-            Some('-') => Some(vec![HtmlTokenizer::char_token('-')]),
+            Some('-') => Some(vec![Token::Character('-')]),
             Some('<') => {
                 self.state = State::ScriptDataDoubleEscapedLessThanSign;
-                Some(vec![HtmlTokenizer::char_token('<')])
+                Some(vec![Token::Character('<')])
             }
             Some('>') => {
                 self.state = State::ScriptData;
-                Some(vec![HtmlTokenizer::char_token('>')])
+                Some(vec![Token::Character('>')])
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
                 self.state = State::ScriptDataDoubleEscaped;
-                Some(vec![HtmlTokenizer::replacement_char_token()])
+                Some(vec![Token::Character('\u{FFFD}')])
             }
             None => {
                 self.error(ParseHtmlError::EofInScriptHtmlCommentLikeText);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.state = State::ScriptDataDoubleEscaped;
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
         }
     }
@@ -998,7 +944,7 @@ impl HtmlTokenizer {
             Some('/') => {
                 self.temp_buf = "".into();
                 self.state = State::ScriptDataDoubleEscapeEnd;
-                Some(vec![HtmlTokenizer::char_token('/')])
+                Some(vec![Token::Character('/')])
             }
             _ => self.script_data_double_escaped(c),
         }
@@ -1013,16 +959,15 @@ impl HtmlTokenizer {
                 } else {
                     self.state = State::ScriptDataDoubleEscaped;
                 }
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.temp_buf.push(lower_c);
-                Some(vec![HtmlTokenizer::char_token(c)])
+                self.temp_buf.push(c.to_ascii_lowercase());
+                Some(vec![Token::Character(c)])
             }
             Some(c) if ascii_lower_alpha(c as u32) => {
                 self.temp_buf.push(c);
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
             _ => self.script_data_double_escaped(c),
         }
@@ -1060,8 +1005,10 @@ impl HtmlTokenizer {
                 return None;
             }
             Some(c) if ascii_upper_alpha(c as u32) => {
-                let lower_c = HtmlTokenizer::lowercase_char_from_ascii_upper(c);
-                self.tag.as_mut().unwrap().append_to_cur_attr_name(lower_c);
+                self.tag
+                    .as_mut()
+                    .unwrap()
+                    .append_to_cur_attr_name(c.to_ascii_lowercase());
                 return None;
             }
             Some('\0') => {
@@ -1105,7 +1052,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.tag.as_mut().unwrap().create_attribute();
@@ -1159,7 +1106,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
@@ -1190,7 +1137,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             Some(c) => {
                 self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
@@ -1231,7 +1178,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                return Some(vec![HtmlTokenizer::eof_token()]);
+                return Some(vec![Token::Eof]);
             }
             _ => (),
         }
@@ -1261,7 +1208,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingWhitespaceBetweenAttributes);
@@ -1282,7 +1229,7 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInTag);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::UnexpectedSolidusInTag);
@@ -1303,7 +1250,7 @@ impl HtmlTokenizer {
             None => {
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             Some('\0') => {
                 self.error(ParseHtmlError::UnexpectedNullCharacter);
@@ -1408,7 +1355,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInComment);
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             _ => {
                 self.comment.as_mut().unwrap().value.push('-');
@@ -1438,7 +1385,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInComment);
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             Some(c) => {
                 self.comment.as_mut().unwrap().value.push(c);
@@ -1508,7 +1455,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInComment);
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             _ => {
                 self.comment.as_mut().unwrap().value.push('-');
@@ -1538,7 +1485,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInComment);
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             _ => {
                 self.comment.as_mut().unwrap().value.push_str("--");
@@ -1566,7 +1513,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInComment);
                 let comment = self.comment.clone().unwrap();
                 self.comment = None;
-                Some(vec![Token::Comment(comment), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Comment(comment), Token::Eof])
             }
             _ => {
                 self.comment.as_mut().unwrap().value.push_str("--!");
@@ -1587,7 +1534,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInDoctype);
                 let mut doctype = Doctype::new();
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingWhitespaceBeforeDoctypeName);
@@ -1625,7 +1572,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInDoctype);
                 let mut doctype = Doctype::new();
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 let mut doctype = Doctype::new();
@@ -1666,7 +1613,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInDoctype);
                 let mut doctype = Doctype::new();
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 self.doctype.as_mut().unwrap().append_to_name(c);
@@ -1689,7 +1636,7 @@ impl HtmlTokenizer {
                 self.error(ParseHtmlError::EofInDoctype);
                 let mut doctype = Doctype::new();
                 doctype.force_quirks = true;
-                return Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()]);
+                return Some(vec![Token::Doctype(doctype), Token::Eof]);
             }
             Some(c) => {
                 let mut peek: [char; 5] = ['\0'; 5];
@@ -1753,7 +1700,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypePublicIdentifier);
@@ -1790,7 +1737,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypePublicIdentifier);
@@ -1828,7 +1775,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 self.doctype.as_mut().unwrap().append_to_public_id(c);
@@ -1865,7 +1812,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 self.doctype.as_mut().unwrap().append_to_public_id(c);
@@ -1908,7 +1855,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
@@ -1946,7 +1893,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
@@ -1988,7 +1935,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
@@ -2025,7 +1972,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::MissingQuoteBeforeDoctypeSystemIdentifier);
@@ -2063,7 +2010,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 self.doctype.as_mut().unwrap().append_to_system_id(c);
@@ -2100,7 +2047,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             Some(c) => {
                 self.doctype.as_mut().unwrap().append_to_system_id(c);
@@ -2124,7 +2071,7 @@ impl HtmlTokenizer {
                 let mut doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
                 doctype.force_quirks = true;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => {
                 self.error(ParseHtmlError::UnexpectedCharacterAfterDoctypeSystemIdentifier);
@@ -2150,7 +2097,7 @@ impl HtmlTokenizer {
             None => {
                 let doctype = self.doctype.clone().unwrap();
                 self.doctype = None;
-                Some(vec![Token::Doctype(doctype), HtmlTokenizer::eof_token()])
+                Some(vec![Token::Doctype(doctype), Token::Eof])
             }
             _ => None,
         }
@@ -2165,9 +2112,9 @@ impl HtmlTokenizer {
             }
             None => {
                 self.error(ParseHtmlError::EofInCData);
-                Some(vec![HtmlTokenizer::eof_token()])
+                Some(vec![Token::Eof])
             }
-            Some(c) => Some(vec![HtmlTokenizer::char_token(c)]),
+            Some(c) => Some(vec![Token::Character(c)]),
         }
     }
 
@@ -2179,7 +2126,7 @@ impl HtmlTokenizer {
                 None
             }
             _ => {
-                let mut tok = vec![HtmlTokenizer::char_token(']')];
+                let mut tok = vec![Token::Character(']')];
                 let mut reconsumed = self.cdata_section(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -2190,16 +2137,13 @@ impl HtmlTokenizer {
     fn cdata_section_end(&mut self, c: Option<char>) -> Option<Vec<Token>> {
         // section 12.2.5.71
         match c {
-            Some(']') => Some(vec![HtmlTokenizer::char_token(']')]),
+            Some(']') => Some(vec![Token::Character(']')]),
             Some('>') => {
                 self.state = State::Data;
                 None
             }
             _ => {
-                let mut tok = vec![
-                    HtmlTokenizer::char_token(']'),
-                    HtmlTokenizer::char_token(']'),
-                ];
+                let mut tok = vec![Token::Character(']'), Token::Character(']')];
                 let mut reconsumed = self.cdata_section(c).unwrap_or_default();
                 tok.append(&mut reconsumed);
                 Some(tok)
@@ -2240,7 +2184,7 @@ impl HtmlTokenizer {
                     self.tag.as_mut().unwrap().append_to_cur_attr_value(c);
                     return None;
                 }
-                Some(vec![HtmlTokenizer::char_token(c)])
+                Some(vec![Token::Character(c)])
             }
             Some(';') => {
                 self.error(ParseHtmlError::UnknownNamedCharacterReference);
