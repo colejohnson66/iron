@@ -25,7 +25,7 @@ pub mod detail;
 
 use crate::html::parser::detail::ParseHtmlError;
 use crate::html::tokenizer::detail::*;
-use crate::infra::*;
+use crate::infra::code_point::*;
 use std::char;
 use std::collections::{HashMap, VecDeque};
 
