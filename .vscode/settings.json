@@ -8,10 +8,12 @@
         "frameset",
         "mathml",
         "noncharacter",
+        "nonexistant",
         "noscript",
         "prepend",
         "reconsume",
         "reconsumed",
-        "spec'd"
+        "spec'd",
+        "unmark"
     ]
 }

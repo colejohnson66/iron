@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   ArrayBufferView.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,12 +20,18 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-// disable dead code warning
-// WARNING: this MUST be removed for release
-#![allow(dead_code)]
-
-pub mod dom;
-pub mod html;
-pub mod infra;
-pub mod io;
-pub mod url;
+// typedef (Int8Array or Int16Array or Int32Array or
+//    Uint8Array or Uint16Array or Uint32Array or Uint8ClampedArray or
+//    Float32Array or Float64Array or DataView) ArrayBufferView;
+pub enum ArrayBufferView {
+    Int8Array(()),
+    Int16Array(()),
+    Int32Array(()),
+    Uint8Array(()),
+    Uint16Array(()),
+    Uint32Array(()),
+    Uint8ClampedArray(()),
+    Float32Array(()),
+    Float64Array(()),
+    DataView(()),
+}

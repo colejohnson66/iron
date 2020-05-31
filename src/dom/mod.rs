@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   mod.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,12 +20,4 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-// disable dead code warning
-// WARNING: this MUST be removed for release
-#![allow(dead_code)]
-
-pub mod dom;
-pub mod html;
-pub mod infra;
-pub mod io;
-pub mod url;
+pub mod idl;
