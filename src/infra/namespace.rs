@@ -87,6 +87,10 @@ impl PartialEq for Namespace {
                 Namespace::Svg => true,
                 _ => false,
             },
+            Namespace::XLink => match other {
+                Namespace::XLink => true,
+                _ => false,
+            },
             Namespace::Xml => match other {
                 Namespace::Xml => true,
                 _ => false,
