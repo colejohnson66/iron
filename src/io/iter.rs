@@ -20,47 +20,112 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-pub struct CharWithOffsetIterator {
-    contents: Vec<char>,
-    pub pos: usize,
-    pub line: u32,
-    pub line_pos: u32,
+use std::io::BufRead;
+
+/// A line-based char iterator.
+/// EOF is stored internally as setting `line` to `buffer.len()` or `line_offsets.len()`
+pub struct LineOffsetIterator {
+    buffer: Vec<String>,
+    line_offsets: Vec<usize>,
+    eof_offset: usize,
+    line: usize,
+    line_pos: usize,
 }
 
-impl CharWithOffsetIterator {
-    pub fn new(string: &str) -> CharWithOffsetIterator {
-        CharWithOffsetIterator {
-            contents: string.chars().collect(),
-            pos: 0,
+impl LineOffsetIterator {
+    pub fn new<T: BufRead>(buffer: &mut T) -> LineOffsetIterator {
+        let buf = LineOffsetIterator::read_all_lines(buffer);
+        let offsets = LineOffsetIterator::get_line_offsets(&buf);
+        LineOffsetIterator {
+            buffer: buf,
+            line_offsets: offsets.0,
+            eof_offset: offsets.1,
             line: 0,
             line_pos: 0,
         }
     }
 
-    pub fn seek(&mut self, new_pos: usize) {
-        self.pos = 0;
-        self.line = 0;
-        self.line_pos = 0;
-        // TODO: inefficient
-        for _ in 0..new_pos {
-            self.read();
+    fn read_all_lines<T: BufRead>(buffer: &mut T) -> Vec<String> {
+        let mut vec: Vec<String> = vec![];
+
+        loop {
+            let mut line = String::new();
+            match buffer.read_line(&mut line) {
+                Ok(0) => break, // EOF
+                Ok(_) => vec.push(line),
+                Err(_) => panic!(),
+            }
         }
+
+        vec
     }
 
+    // returns a tuple with `0` containing the line offsets and `1` containing the EOF offset
+    fn get_line_offsets(lines: &Vec<String>) -> (Vec<usize>, usize) {
+        let mut vec: Vec<usize> = Vec::with_capacity(lines.len());
+
+        let mut offset = 0usize;
+        for line in lines {
+            vec.push(offset);
+            offset += line.len();
+        }
+
+        (vec, offset)
+    }
+
+    pub fn seek(&mut self, new_pos: usize) {
+        // TODO: add error handling
+        if new_pos > self.eof_offset {
+            panic!();
+        }
+
+        // TODO: FIXME: fix
+        if new_pos == self.eof_offset {
+            unimplemented!();
+        }
+
+        // find what line `new_pos` is in
+        let new_line = {
+            let mut line = 0usize;
+            for (i, this_off) in self.line_offsets.iter().enumerate() {
+                line = i;
+                if *this_off >= new_pos {
+                    break;
+                }
+            }
+            line
+        };
+
+        let new_line_off = new_pos - self.line_offsets.get(new_line).unwrap();
+
+        self.line = new_line;
+        self.line_pos = new_line_off;
+    }
+
+    // same as `peek`, but increments the pointer before returning
     pub fn read(&mut self) -> Option<char> {
-        if self.pos >= self.contents.len() {
+        // possible EOF?
+        if self.line == self.buffer.len() {
             return None;
         }
-        // Bounds checked already performed, so just `unwrap()`
-        let c = self.contents.get(self.pos).unwrap();
-        if *c == '\n' {
+
+        let cur_line = self.buffer.get(self.line).unwrap();
+        let cur_line_len = cur_line.chars().count();
+        if self.line_pos >= cur_line_len {
+            panic!();
+        }
+        let c = cur_line.chars().nth(self.line_pos).unwrap();
+
+        // increment pointer
+        let new_line_pos = self.line_pos + 1;
+        if new_line_pos == cur_line_len {
             self.line += 1;
             self.line_pos = 0;
         } else {
-            self.line_pos += 1;
+            self.line_pos = new_line_pos;
         }
 
-        Some(*c)
+        Some(c)
     }
 
     pub fn read_multiple(&mut self, buf: &mut [char]) -> usize {
@@ -77,36 +142,49 @@ impl CharWithOffsetIterator {
     }
 
     pub fn backtrack(&mut self) {
-        if self.pos >= self.contents.len() {
-            unreachable!();
-        }
-        // Bounds checked already performed, so just `unwrap()`
-        let c = self.contents.get(self.pos).unwrap();
-        if *c == '\n' {
-            self.line -= 1;
-            // TODO: calculate this by counting number of characters until last '\n'
-            self.line_pos = 5000;
-        }
-
-        self.pos -= 1;
-    }
-
-    pub fn backtrack_multiple(&mut self, count: usize) {
-        if self.pos >= self.contents.len() {
-            unreachable!();
-        }
-
-        // if backtracking more than possible, just reset to 0
-        if count >= self.pos {
-            self.pos = 0;
-            self.line = 0;
-            self.line_pos = 0;
+        // beginning of buffer?
+        if self.line == 0 && self.line_pos == 0 {
             return;
         }
 
-        // TODO: inefficient
+        // EOF?
+        if self.line == self.buffer.len() {
+            self.line -= 1;
+            self.line_pos = self.buffer.get(self.line).unwrap().chars().count() - 1;
+            return;
+        }
+
+        // beginning of line?
+        if self.line_pos == 0 {
+            self.line -= 1;
+            self.line_pos = self.buffer.get(self.line).unwrap().chars().count() - 1;
+            return;
+        }
+
+        // middle of line
+        self.line_pos -= 1;
+    }
+
+    pub fn backtrack_multiple(&mut self, count: usize) {
         for _ in 0..count {
             self.backtrack();
         }
+    }
+
+    // same as `read`, but doesn't increment the pointer
+    pub fn peek(&self) -> Option<char> {
+        // possible EOF?
+        if self.line == self.buffer.len() {
+            return None;
+        }
+
+        let cur_line = self.buffer.get(self.line).unwrap();
+        let cur_line_len = cur_line.chars().count();
+        if self.line_pos >= cur_line_len {
+            panic!();
+        }
+        let c = cur_line.chars().nth(self.line_pos).unwrap();
+
+        Some(c)
     }
 }

@@ -20,17 +20,19 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::io::iter::CharWithOffsetIterator;
+use crate::io::iter::LineOffsetIterator;
+use std::io::Cursor;
 
 pub struct JsTokenizer {
-    js: CharWithOffsetIterator,
+    js: LineOffsetIterator,
     //tokens_to_emit: VecDeque<>
 }
 
 impl JsTokenizer {
     pub fn new(js: &str) -> JsTokenizer {
+        let mut cursor = Cursor::new(js);
         JsTokenizer {
-            js: CharWithOffsetIterator::new(js),
+            js: LineOffsetIterator::new(&mut cursor),
             //tokens_to_emit: VecDeque::new(),
         }
     }
