@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   detail.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,13 +20,24 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-// disable dead code warning
-// WARNING: this MUST be removed for release
-#![allow(dead_code)]
+pub fn control(c: u32) -> bool {
+    match c {
+        0x200C | 0x200D | 0xFEFF => true,
+        _ => false,
+    }
+}
 
-pub mod html;
-pub mod idl;
-pub mod infra;
-pub mod io;
-pub mod js;
-pub mod url;
+pub fn white_space(c: u32) -> bool {
+    match c {
+        0x9 | 0xB | 0xC | 0x20 | 0xA0 | 0xFEFF => true,
+        // TODO: any other Unicode "Space_Separator" code point
+        _ => false,
+    }
+}
+
+pub fn line_terminator(c: u32) -> bool {
+    match c {
+        0xA | 0xD | 0x2028 | 0x2029 => true,
+        _ => false,
+    }
+}

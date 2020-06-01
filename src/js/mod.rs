@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   lib.rs
+ * File:   mod.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,13 +20,23 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-// disable dead code warning
-// WARNING: this MUST be removed for release
-#![allow(dead_code)]
+mod detail;
+pub mod tokenizer;
 
-pub mod html;
-pub mod idl;
-pub mod infra;
-pub mod io;
-pub mod js;
-pub mod url;
+// <https://tc39.es/ecma262/#sec-ecmascript-language-types>
+pub enum JsType {
+    Undefined,
+    Null,
+    Boolean(bool),
+    String(Vec<u16>),
+    Symbol(Box<dyn JsSymbol>),
+    Number(f64),
+    BigInt(()),
+    Object(Box<dyn JsObject>),
+}
+
+pub trait JsSymbol {}
+
+pub trait JsObject {}
+
+// TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>

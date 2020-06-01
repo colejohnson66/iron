@@ -21,3 +21,94 @@
  * ============================================================================
  */
 pub mod decode;
+
+pub struct LineCountingChars {
+    contents: Vec<char>,
+    pub pos: usize,
+    pub line: u32,
+    pub line_pos: u32,
+}
+
+impl LineCountingChars {
+    pub fn new(string: &str) -> LineCountingChars {
+        LineCountingChars {
+            contents: string.chars().collect(),
+            pos: 0,
+            line: 0,
+            line_pos: 0,
+        }
+    }
+
+    pub fn seek(&mut self, new_pos: usize) {
+        self.pos = 0;
+        self.line = 0;
+        self.line_pos = 0;
+        // TODO: inefficient
+        for _ in 0..new_pos {
+            self.read();
+        }
+    }
+
+    pub fn read(&mut self) -> Option<char> {
+        if self.pos >= self.contents.len() {
+            return None;
+        }
+        // Bounds checked already performed, so just `unwrap()`
+        let c = self.contents.get(self.pos).unwrap();
+        if *c == '\n' {
+            self.line += 1;
+            self.line_pos = 0;
+        } else {
+            self.line_pos += 1;
+        }
+
+        Some(*c)
+    }
+
+    pub fn read_multiple(&mut self, buf: &mut [char]) -> usize {
+        // attempts to read `buf.len()` chars, but if `self.read()` returns `None`, aborts
+        for n in 0..buf.len() {
+            let c = self.read();
+            match c {
+                Some(c) => buf[n] = c,
+                None => return n,
+            }
+        }
+        // `buf.len()` characters read successfully
+        buf.len()
+    }
+
+    pub fn backtrack(&mut self) {
+        if self.pos >= self.contents.len() {
+            unreachable!();
+        }
+        // Bounds checked already performed, so just `unwrap()`
+        let c = self.contents.get(self.pos).unwrap();
+        if *c == '\n' {
+            self.line -= 1;
+            // TODO: calculate this by counting number of characters until last '\n'
+            self.line_pos = 5000;
+        }
+
+        self.pos -= 1;
+    }
+
+    pub fn backtrack_multiple(&mut self, count: usize) {
+        if self.pos >= self.contents.len() {
+            unreachable!();
+        }
+
+        // if backtracking more than possible, just reset to 0
+        if count >= self.pos {
+            self.pos = 0;
+            self.line = 0;
+            self.line_pos = 0;
+            return;
+        }
+
+        // TODO: inefficient
+        for _ in 0..count {
+            self.backtrack();
+        }
+    }
+}
