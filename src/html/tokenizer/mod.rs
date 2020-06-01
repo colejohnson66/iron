@@ -26,12 +26,12 @@ pub mod detail;
 use crate::html::parser::detail::ParseHtmlError;
 use crate::html::tokenizer::detail::*;
 use crate::infra::code_point::*;
-use crate::io::LineCountingChars;
+use crate::io::iter::CharWithOffsetIterator;
 use std::char;
 use std::collections::{HashMap, VecDeque};
 
 pub struct HtmlTokenizer {
-    html: LineCountingChars,
+    html: CharWithOffsetIterator,
     pub state: State,
 
     return_state: Option<State>,
@@ -50,7 +50,7 @@ pub struct HtmlTokenizer {
 impl HtmlTokenizer {
     pub fn new(html: &str) -> HtmlTokenizer {
         HtmlTokenizer {
-            html: LineCountingChars::new(html),
+            html: CharWithOffsetIterator::new(html),
             state: State::Data,
             return_state: None,
             last_emitted_tag: None,

@@ -20,17 +20,17 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::io::LineCountingChars;
+use crate::io::iter::CharWithOffsetIterator;
 
 pub struct JsTokenizer {
-    js: LineCountingChars,
+    js: CharWithOffsetIterator,
     //tokens_to_emit: VecDeque<>
 }
 
 impl JsTokenizer {
     pub fn new(js: &str) -> JsTokenizer {
         JsTokenizer {
-            js: LineCountingChars::new(js),
+            js: CharWithOffsetIterator::new(js),
             //tokens_to_emit: VecDeque::new(),
         }
     }
