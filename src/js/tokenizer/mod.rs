@@ -36,6 +36,9 @@ impl JsTokenizer {
             //tokens_to_emit: VecDeque::new(),
         }
     }
+
+    // in the impl blocks below, each fn MUST reset the
+    //   state if it nothing matches
 }
 
 // implementation of <https://tc39.es/ecma262/#sec-comments>
@@ -45,14 +48,19 @@ impl JsTokenizer {
         //     MultiLineComment
         //     SingleLineComment
 
+        let state = self.js.state();
+
         match self.multi_line_comment() {
             Some(_) => return Some(()),
             None => (),
         }
+
         match self.single_line_comment() {
             Some(_) => return Some(()),
             None => (),
         }
+
+        self.js.set_state(state);
         None
     }
 
@@ -75,7 +83,6 @@ impl JsTokenizer {
         match self.multi_line_comment_chars() {
             Some(_) => (),
             None => {
-                // backtrack
                 self.js.set_state(state);
                 return None;
             }
@@ -94,6 +101,10 @@ impl JsTokenizer {
     }
 
     fn multi_line_comment_chars(&mut self) -> Option<()> {
+        // MultiLineCommentChars ::
+        //     MultiLineNotAsteriskChar opt[MultiLineCommentChars]
+        //     "*" opt[PostAsteriskCommentChars]
+
         unimplemented!();
     }
 
