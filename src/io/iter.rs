@@ -137,6 +137,7 @@ impl LineOffsetIterator {
                 None => return n,
             }
         }
+
         // `buf.len()` characters read successfully
         buf.len()
     }
@@ -186,5 +187,40 @@ impl LineOffsetIterator {
         let c = cur_line.chars().nth(self.line_pos).unwrap();
 
         Some(c)
+    }
+
+    pub fn peek_multiple(&mut self, buf: &mut [char]) -> usize {
+        // attempts to peek `buf.len()` chars, but aborts early if EOF is reached
+        let mut line_to_peek = self.line;
+        let mut line_to_peek_off = self.line_pos;
+
+        for n in 0..buf.len() {
+            // EOF?
+            if line_to_peek == self.buffer.len() {
+                return n;
+            }
+
+            // peek a char
+            let mut peeked_line = self.buffer.get(line_to_peek).unwrap();
+            let peeked_line_len = peeked_line.chars().count(); // TODO: don't do this every iteration
+
+            // at end of line?
+            if line_to_peek_off == peeked_line_len {
+                line_to_peek += 1;
+                line_to_peek_off = 0;
+                peeked_line = match self.buffer.get(line_to_peek) {
+                    None => {
+                        // now at EOF
+                        return n;
+                    }
+                    Some(line) => line,
+                }
+            }
+
+            buf[n] = peeked_line.chars().nth(line_to_peek_off).unwrap();
+        }
+
+        // `buf.len()` characters read successfully
+        buf.len()
     }
 }
