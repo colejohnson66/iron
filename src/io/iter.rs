@@ -142,6 +142,19 @@ impl LineOffsetIterator {
         buf.len()
     }
 
+    pub fn consume(&mut self) {
+        self.read();
+    }
+
+    pub fn consume_multiple(&mut self, count: usize) {
+        for _ in 0..count {
+            match self.read() {
+                Some(_) => continue,
+                None => return, // bail early if EOF reached
+            }
+        }
+    }
+
     pub fn backtrack(&mut self) {
         // beginning of buffer?
         if self.line == 0 && self.line_pos == 0 {
@@ -222,5 +235,16 @@ impl LineOffsetIterator {
 
         // `buf.len()` characters read successfully
         buf.len()
+    }
+
+    /// Gets the line and line offset states.
+    /// Used to reset to a known position when tokenizing
+    pub fn state(&self) -> (usize, usize) {
+        (self.line, self.line_pos)
+    }
+
+    pub fn set_state(&mut self, state: (usize, usize)) {
+        self.line = state.0;
+        self.line_pos = state.1;
     }
 }

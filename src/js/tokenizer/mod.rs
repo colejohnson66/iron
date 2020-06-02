@@ -44,6 +44,7 @@ impl JsTokenizer {
         // Comment ::
         //     MultiLineComment
         //     SingleLineComment
+
         match self.multi_line_comment() {
             Some(_) => return Some(()),
             None => (),
@@ -56,7 +57,40 @@ impl JsTokenizer {
     }
 
     fn multi_line_comment(&mut self) -> Option<()> {
-        unimplemented!();
+        // MultiLineComment ::
+        //     "/*" opt[MultiLineCommentChars] "*/"
+
+        let state = self.js.state();
+
+        let mut peek: [char; 2] = ['\0'; 2];
+        if self.js.peek_multiple(&mut peek) != 2 {
+            self.js.set_state(state);
+            return None;
+        };
+        if peek.iter().collect::<String>() != "/*" {
+            return None;
+        }
+        self.js.consume_multiple(2);
+
+        match self.multi_line_comment_chars() {
+            Some(_) => (),
+            None => {
+                // backtrack
+                self.js.set_state(state);
+                return None;
+            }
+        }
+
+        if self.js.peek_multiple(&mut peek) != 2 {
+            self.js.set_state(state);
+            return None;
+        }
+        if peek.iter().collect::<String>() != "*/" {
+            return None;
+        }
+        self.js.consume_multiple(2);
+
+        Some(())
     }
 
     fn multi_line_comment_chars(&mut self) -> Option<()> {
