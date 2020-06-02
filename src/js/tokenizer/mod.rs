@@ -20,7 +20,11 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+pub mod detail;
+
 use crate::io::iter::LineOffsetIterator;
+use crate::js::detail::*;
+use crate::js::tokenizer::detail::*;
 use std::io::Cursor;
 
 pub struct JsTokenizer {
@@ -37,8 +41,11 @@ impl JsTokenizer {
         }
     }
 
-    // in the impl blocks below, each fn MUST reset the
-    //   state if it nothing matches
+    // In the impl blocks below, each fn MUST reset the state
+    //   if nothing matches.
+    // The return value is an Option<T> struct with two states:
+    //  - None => no match
+    //  - Some(T) => a match; T may or may not contain data
 }
 
 // implementation of <https://tc39.es/ecma262/#sec-comments>
@@ -80,13 +87,7 @@ impl JsTokenizer {
         self.js.consume_multiple(2);
 
         // match opt[MultiLineCommentChars]
-        match self.multi_line_comment_chars() {
-            Some(_) => (),
-            None => {
-                self.js.set_state(state);
-                return None;
-            }
-        }
+        self.multi_line_comment_chars();
 
         // match "*/"
         if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "*/" {
@@ -103,30 +104,223 @@ impl JsTokenizer {
         //     MultiLineNotAsteriskChar opt[MultiLineCommentChars]
         //     "*" opt[PostAsteriskCommentChars]
 
-        unimplemented!();
+        let state = self.js.state();
+
+        // match MultiLineNotAsteriskChar
+        match self.multi_line_not_asterisk_char() {
+            Some(_) => {
+                // match opt[MultiLineCommentChars]
+                self.multi_line_comment_chars();
+                return Some(());
+            }
+            None => self.js.set_state(state),
+        }
+
+        // match "*"
+        match self.js.peek() {
+            Some('*') => {
+                self.js.consume();
+                // match opt[PostAsteriskCommentChar]
+                self.post_asterisk_comment_chars();
+                return Some(());
+            }
+            _ => self.js.set_state(state),
+        }
+
+        None
     }
 
     fn post_asterisk_comment_chars(&mut self) -> Option<()> {
-        unimplemented!();
+        // PostAsteriskCommentChars ::
+        //     MultiLineNotForwardSlashOrAsteriskChar opt[MultiLineCommentChars]
+        //     "*" opt[PostAsteriskCommentChars]
+
+        let state = self.js.state();
+
+        // match MultiLineNotForwardSlashOrAsteriskChar
+        match self.multi_line_not_forward_slash_or_asterisk_char() {
+            Some(_) => {
+                // match MultiLineCommentChars
+                self.multi_line_comment_chars();
+                return Some(());
+            }
+            None => self.js.set_state(state),
+        }
+
+        // match "*"
+        match self.js.peek() {
+            Some('*') => {
+                self.js.consume();
+                // match opt[PostAsteriskCommentChar]
+                self.post_asterisk_comment_chars();
+                return Some(());
+            }
+            _ => self.js.set_state(state),
+        }
+
+        None
     }
 
-    fn multi_line_asterisk_char(&mut self) -> Option<()> {
-        unimplemented!();
+    fn multi_line_not_asterisk_char(&mut self) -> Option<()> {
+        // MultiLineNotAsteriskChar ::
+        //     SourceChar[excl['*']]
+
+        match self.js.peek() {
+            Some('*') => None,
+            Some(_) => {
+                self.js.consume();
+                Some(())
+            }
+            None => None,
+        }
     }
 
     fn multi_line_not_forward_slash_or_asterisk_char(&mut self) -> Option<()> {
-        unimplemented!();
+        // MultiLineNotForwardSlashOrAsteriskChar ::
+        //     SourceChar[excl['/', '*']]
+
+        match self.js.peek() {
+            Some('/') | Some('*') => None,
+            Some(_) => {
+                self.js.consume();
+                Some(())
+            }
+            None => None,
+        }
     }
 
     fn single_line_comment(&mut self) -> Option<()> {
-        unimplemented!();
+        // SingleLineComment ::
+        //     "//" opt[SingleLineCommentChars]
+
+        // match "/*"
+        let mut peek: [char; 2] = ['\0'; 2];
+        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "//" {
+            return None;
+        };
+        self.js.consume_multiple(2);
+
+        // match opt[SingleLineCommentChars]
+        self.single_line_comment_chars();
+
+        Some(())
     }
 
     fn single_line_comment_chars(&mut self) -> Option<()> {
-        unimplemented!();
+        // SingleLineCommentChars ::
+        //     SingleLineCommentChar opt[SingleLineCommentChars]
+
+        let state = self.js.state();
+
+        match self.single_line_comment_char() {
+            Some(_) => {
+                // match opt[SingleLineCommentChars]
+                self.single_line_comment_chars();
+                Some(())
+            }
+            None => {
+                self.js.set_state(state);
+                None
+            }
+        }
     }
 
     fn single_line_comment_char(&mut self) -> Option<()> {
+        // SingleLineCommentChar ::
+        //     SourceChar[excl[LineTerminator]]
+
+        match self.js.peek() {
+            Some(c) if line_terminator(c as u32) => None,
+            Some(_) => {
+                self.js.consume();
+                Some(())
+            }
+            None => None,
+        }
+    }
+}
+
+// implementation of <https://tc39.es/ecma262/#sec-tokens>
+impl JsTokenizer {
+    fn common_token(&mut self) -> Option<CommonToken> {
+        unimplemented!();
+    }
+}
+
+// implementation of <https://tc39.es/ecma262/#sec-names-and-keywords>
+impl JsTokenizer {
+    fn identifier_name(&mut self) -> Option<()> {
+        // IdentifierName ::
+        //     IdentifierStart
+        //     IdentifierName IdentifierPart
+
+        let state = self.js.state();
+
+        // match IdentifierStart
+        match self.identifier_start() {
+            Some(_) => return Some(()),
+            _ => (),
+        }
+
+        // match IdentifierName
+        match self.identifier_name() {
+            Some(_) => {
+                // match IdentifierPart
+                match self.identifier_part() {
+                    Some(_) => return Some(()),
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+
+        self.js.set_state(state);
+        None
+    }
+
+    fn identifier_start(&mut self) -> Option<()> {
+        // IdentifierStart ::
+        //     UnicodeIDStart
+        //     "$"
+        //     "_"
+        //     "\" UnicodeEscapeSequence
+
+        let state = self.js.state();
+
+        // match UnicodeIDStart
+        match self.unicode_id_start() {
+            Some(_) => return Some(()),
+            None => (),
+        }
+
+        // match "$" or "_"
+        match self.js.peek() {
+            Some('$') | Some('_') => return Some(()),
+            Some(_) | None => (),
+        }
+
+        // match "\"
+        match self.js.peek() {
+            Some('\\') => {
+                // match UnicodeEscapeSequence
+                unimplemented!();
+            }
+            Some(_) | None => (),
+        }
+
+        self.js.set_state(state);
+        None
+    }
+
+    fn identifier_part(&mut self) -> Option<()> {
+        unimplemented!();
+    }
+
+    fn unicode_id_start(&mut self) -> Option<()> {
+        unimplemented!();
+    }
+
+    fn unicode_id_continue(&mut self) -> Option<()> {
         unimplemented!();
     }
 }

@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   mod.rs
+ * File:   detail.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,23 +20,10 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-pub mod detail;
-pub mod tokenizer;
-
-// <https://tc39.es/ecma262/#sec-ecmascript-language-types>
-pub enum JsType {
-    Undefined,
-    Null,
-    Boolean(bool),
-    String(Vec<u16>),
-    Symbol(Box<dyn JsSymbol>),
-    Number(f64),
-    BigInt(()),
-    Object(Box<dyn JsObject>),
+pub enum CommonToken {
+    Identifier(String),
+    Punctuator(String),
+    NumericLiteral(String),
+    StringLiteral(String),
+    Template(String),
 }
-
-pub trait JsSymbol {}
-
-pub trait JsObject {}
-
-// TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
