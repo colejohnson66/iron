@@ -1,5 +1,5 @@
 /* ============================================================================
- * File:   mod.rs
+ * File:   types.rs
  * Author: Cole Johnson
  * ============================================================================
  * Copyright (c) 2020 Cole Johnson
@@ -20,23 +20,15 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::js::types::*;
-use crate::string::Utf16String;
+pub struct JsBigInt {}
 
-pub mod detail;
-pub mod tokenizer;
-pub mod types;
-
-// <https://tc39.es/ecma262/#sec-ecmascript-language-types>
-pub enum JsType {
-    Undefined,
-    Null,
-    Boolean(bool),
-    String(Utf16String),
-    Symbol(Box<dyn JsSymbol>),
-    Number(JsNumber),
-    BigInt(JsBigInt),
-    Object(Box<dyn JsObject>),
+pub enum JsNumber {
+    Integer(i64),
+    Float(f64),
 }
+
+pub trait JsSymbol {}
+
+pub trait JsObject {}
 
 // TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
