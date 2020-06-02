@@ -27,6 +27,10 @@ use crate::js::detail::*;
 use crate::js::tokenizer::detail::*;
 use std::io::Cursor;
 
+const ZWNJ: u32 = 0x200C;
+const ZWJ: u32 = 0x200D;
+const ZWNBSP: u32 = 0xFEFF;
+
 pub struct JsTokenizer {
     js: LineOffsetIterator,
     //tokens_to_emit: VecDeque<>
@@ -81,22 +85,21 @@ impl JsTokenizer {
 
         // match "/*"
         let mut peek: [char; 2] = ['\0'; 2];
-        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "/*" {
-            return None;
-        };
-        self.js.consume_multiple(2);
+        if self.js.peek_multiple(&mut peek) == 2 && peek.iter().collect::<String>() == "/*" {
+            self.js.consume_multiple(2);
 
-        // match opt[MultiLineCommentChars]
-        self.multi_line_comment_chars();
+            // match opt[MultiLineCommentChars]
+            self.multi_line_comment_chars();
 
-        // match "*/"
-        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "*/" {
-            self.js.set_state(state);
-            return None;
+            // match "*/"
+            if self.js.peek_multiple(&mut peek) == 2 && peek.iter().collect::<String>() == "*/" {
+                self.js.consume_multiple(2);
+                return Some(());
+            }
         }
-        self.js.consume_multiple(2);
 
-        Some(())
+        self.js.set_state(state);
+        None
     }
 
     fn multi_line_comment_chars(&mut self) -> Option<()> {
@@ -113,8 +116,10 @@ impl JsTokenizer {
                 self.multi_line_comment_chars();
                 return Some(());
             }
-            None => self.js.set_state(state),
+            None => (),
         }
+
+        self.js.set_state(state);
 
         // match "*"
         match self.js.peek() {
@@ -124,9 +129,10 @@ impl JsTokenizer {
                 self.post_asterisk_comment_chars();
                 return Some(());
             }
-            _ => self.js.set_state(state),
+            _ => (),
         }
 
+        self.js.set_state(state);
         None
     }
 
@@ -144,8 +150,10 @@ impl JsTokenizer {
                 self.multi_line_comment_chars();
                 return Some(());
             }
-            None => self.js.set_state(state),
+            _ => (),
         }
+
+        self.js.set_state(state);
 
         // match "*"
         match self.js.peek() {
@@ -155,9 +163,10 @@ impl JsTokenizer {
                 self.post_asterisk_comment_chars();
                 return Some(());
             }
-            _ => self.js.set_state(state),
+            _ => (),
         }
 
+        self.js.set_state(state);
         None
     }
 
@@ -195,15 +204,16 @@ impl JsTokenizer {
 
         // match "/*"
         let mut peek: [char; 2] = ['\0'; 2];
-        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "//" {
-            return None;
+        if self.js.peek_multiple(&mut peek) == 2 && peek.iter().collect::<String>() == "//" {
+            self.js.consume_multiple(2);
+
+            // match opt[SingleLineCommentChars]
+            self.single_line_comment_chars();
+
+            return Some(());
         };
-        self.js.consume_multiple(2);
 
-        // match opt[SingleLineCommentChars]
-        self.single_line_comment_chars();
-
-        Some(())
+        None
     }
 
     fn single_line_comment_chars(&mut self) -> Option<()> {
@@ -216,13 +226,13 @@ impl JsTokenizer {
             Some(_) => {
                 // match opt[SingleLineCommentChars]
                 self.single_line_comment_chars();
-                Some(())
+                return Some(());
             }
-            None => {
-                self.js.set_state(state);
-                None
-            }
+            None => (),
         }
+
+        self.js.set_state(state);
+        None
     }
 
     fn single_line_comment_char(&mut self) -> Option<()> {
@@ -313,14 +323,59 @@ impl JsTokenizer {
     }
 
     fn identifier_part(&mut self) -> Option<()> {
-        unimplemented!();
+        // IdentifierPart ::
+        //     UnicodeIDContinue
+        //     "$"
+        //     "\" UnicodeEscapeSequence
+        //     <ZWNJ>
+        //     <ZWJ>
+
+        // match UnicodeIDContinue
+        match self.unicode_id_continue() {
+            Some(_) => return Some(()),
+            _ => (),
+        }
+
+        // match "$"
+        match self.js.peek() {
+            Some('$') => {
+                self.js.consume();
+                return Some(());
+            }
+            _ => (),
+        }
+
+        // match "\"
+        match self.js.peek() {
+            Some('\\') => {
+                self.js.consume();
+                // match UnicodeEscapeSequence
+                unimplemented!();
+            }
+            _ => (),
+        }
+
+        // match <ZWNJ> or <ZWJ>
+        match self.js.peek() {
+            Some(c) if c as u32 == ZWNJ || c as u32 == ZWJ => {
+                self.js.consume();
+                return Some(());
+            }
+            _ => (),
+        }
+
+        None
     }
 
     fn unicode_id_start(&mut self) -> Option<()> {
+        // UnicodeIDStart ::
+        //     == any Unicode code point with the Unicode property "ID_Start"
         unimplemented!();
     }
 
     fn unicode_id_continue(&mut self) -> Option<()> {
+        // UnicodeIDContinue ::
+        //     == any Unicode code point with the Unicode property "ID_Continue"
         unimplemented!();
     }
 }
