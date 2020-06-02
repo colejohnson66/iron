@@ -29,4 +29,5 @@ pub mod idl;
 pub mod infra;
 pub mod io;
 pub mod js;
+pub mod string;
 pub mod url;

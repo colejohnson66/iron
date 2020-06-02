@@ -20,6 +20,8 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+use crate::string::Utf16String;
+
 pub mod detail;
 pub mod tokenizer;
 
@@ -28,7 +30,7 @@ pub enum JsType {
     Undefined,
     Null,
     Boolean(bool),
-    String(Vec<u16>),
+    String(Utf16String),
     Symbol(Box<dyn JsSymbol>),
     Number(f64),
     BigInt(()),
