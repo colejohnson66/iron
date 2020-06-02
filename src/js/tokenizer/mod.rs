@@ -72,7 +72,6 @@ impl JsTokenizer {
 
         let mut peek: [char; 2] = ['\0'; 2];
         if self.js.peek_multiple(&mut peek) != 2 {
-            self.js.set_state(state);
             return None;
         };
         if peek.iter().collect::<String>() != "/*" {
