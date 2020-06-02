@@ -116,8 +116,8 @@ pub trait JsObject {
     fn set(&mut self, p: &JsKey, v: &JsType, receiver: ()) -> bool;
     fn delete(&mut self, p: &JsKey) -> bool;
     fn own_property_keys(&mut self) -> Vec<&JsKey>;
-    fn call(&mut self, this: &JsType, args: Vec<&JsType>) -> &JsType;
-    fn construct(&mut self, args: Vec<&JsType>, obj: &Box<dyn JsObject>) -> &Box<dyn JsObject>;
+    fn call(&mut self, v: &JsType, args: Vec<&JsType>) -> &JsType;
+    fn construct(&mut self, args: Vec<&JsType>, target: &Box<dyn JsObject>) -> &Box<dyn JsObject>;
 }
 
 // TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
