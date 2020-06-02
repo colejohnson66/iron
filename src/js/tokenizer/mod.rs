@@ -50,11 +50,13 @@ impl JsTokenizer {
 
         let state = self.js.state();
 
+        // match MultiLineComment
         match self.multi_line_comment() {
             Some(_) => return Some(()),
             None => (),
         }
 
+        // match SingleLineComment
         match self.single_line_comment() {
             Some(_) => return Some(()),
             None => (),
@@ -70,15 +72,14 @@ impl JsTokenizer {
 
         let state = self.js.state();
 
+        // match "/*"
         let mut peek: [char; 2] = ['\0'; 2];
-        if self.js.peek_multiple(&mut peek) != 2 {
+        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "/*" {
             return None;
         };
-        if peek.iter().collect::<String>() != "/*" {
-            return None;
-        }
         self.js.consume_multiple(2);
 
+        // match opt[MultiLineCommentChars]
         match self.multi_line_comment_chars() {
             Some(_) => (),
             None => {
@@ -87,11 +88,9 @@ impl JsTokenizer {
             }
         }
 
-        if self.js.peek_multiple(&mut peek) != 2 {
+        // match "*/"
+        if self.js.peek_multiple(&mut peek) != 2 || peek.iter().collect::<String>() != "*/" {
             self.js.set_state(state);
-            return None;
-        }
-        if peek.iter().collect::<String>() != "*/" {
             return None;
         }
         self.js.consume_multiple(2);
