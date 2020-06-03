@@ -20,12 +20,11 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::js::types::*;
+use crate::js::detail::*;
 use crate::string::Utf16String;
 
 pub mod detail;
 pub mod tokenizer;
-pub mod types;
 
 type JsHandle = usize;
 
