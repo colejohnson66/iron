@@ -105,19 +105,34 @@ pub trait JsSymbol {
 
 pub trait JsObject {
     fn typename(&self) -> &str;
-    fn get_prototype_of(&mut self) -> Option<&Box<dyn JsObject>>;
-    fn set_prototype_of(&mut self, v: Option<&Box<dyn JsObject>>) -> bool;
+
+    fn get_prototype(&mut self) -> Option<&Box<dyn JsObject>>;
+    fn set_prototype(&mut self, v: Option<&Box<dyn JsObject>>) -> bool;
     fn is_extensible(&mut self) -> bool;
     fn prevent_extensions(&mut self) -> bool;
-    fn get_own_property(&mut self, p: &JsKey) -> &JsType;
-    fn define_own_property(&mut self, p: &JsKey, desc: &JsType) -> bool;
-    fn has_property(&self, p: &JsKey) -> bool;
-    fn get(&mut self, p: &JsKey, receiver: ()) -> &JsType;
-    fn set(&mut self, p: &JsKey, v: &JsType, receiver: ()) -> bool;
-    fn delete(&mut self, p: &JsKey) -> bool;
+    fn get_own_property(&mut self, key: &JsKey) -> &JsType;
+    fn define_own_property(&mut self, key: &JsKey, desc: &JsType) -> bool;
+    fn has_property(&mut self, key: &JsKey) -> bool;
+    fn get(&mut self, key: &JsKey, this: ()) -> &JsType;
+    fn set(&mut self, key: &JsKey, val: &JsType, this: ()) -> bool;
+    fn delete(&mut self, key: &JsKey) -> bool;
     fn own_property_keys(&mut self) -> Vec<&JsKey>;
-    fn call(&mut self, v: &JsType, args: Vec<&JsType>) -> &JsType;
-    fn construct(&mut self, args: Vec<&JsType>, target: &Box<dyn JsObject>) -> &Box<dyn JsObject>;
+    fn call(&mut self, this: &JsType, args: Vec<&JsType>) -> &JsType;
+    fn construct(&mut self, args: Vec<&JsType>, this: &Box<dyn JsObject>) -> &Box<dyn JsObject>;
+}
+
+pub struct JsDataProp {
+    value: JsType,
+    writable: bool,
+    enumerable: bool,
+    configurable: bool,
+}
+
+pub struct JsAccessorProp {
+    get: JsType,
+    set: JsType,
+    enumerable: bool,
+    configurable: bool,
 }
 
 // TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>

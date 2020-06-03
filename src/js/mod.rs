@@ -27,6 +27,8 @@ pub mod detail;
 pub mod tokenizer;
 pub mod types;
 
+type JsHandle = usize;
+
 // <https://tc39.es/ecma262/#sec-ecmascript-language-types>
 pub enum JsType {
     Undefined,
@@ -37,6 +39,7 @@ pub enum JsType {
     Number(JsNumber),
     BigInt(JsBigInt),
     Object(Box<dyn JsObject>),
+    Function(()),
 }
 
 // TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
