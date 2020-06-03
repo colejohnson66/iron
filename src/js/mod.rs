@@ -20,12 +20,12 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::js::detail::*;
-use crate::string::Utf16String;
-
 pub mod detail;
 pub mod tokenizer;
 pub mod types;
+
+pub use crate::js::detail::*;
+use crate::string::Utf16String;
 
 type JsHandle = usize;
 
@@ -39,7 +39,4 @@ pub enum JsType {
     Number(JsNumber),
     BigInt(JsBigInt),
     Object(Box<dyn JsObject>),
-    Function(()),
 }
-
-// TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
