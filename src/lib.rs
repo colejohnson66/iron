@@ -25,7 +25,6 @@
 #![allow(dead_code)]
 
 pub mod html;
-pub mod idl;
 pub mod infra;
 pub mod io;
 pub mod js;
