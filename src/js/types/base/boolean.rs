@@ -22,7 +22,15 @@
  */
 use crate::js::{JsKey, JsObject, JsType};
 
-pub struct Boolean;
+pub struct Boolean {
+    val: bool,
+}
+
+impl Boolean {
+    fn new(val: &JsType) -> Boolean {
+        Boolean { val: false }
+    }
+}
 
 impl JsObject for Boolean {
     fn typename(&self) -> &str {
