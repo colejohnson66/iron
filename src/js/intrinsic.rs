@@ -21,7 +21,8 @@
  * ============================================================================
  */
 // abstract operations as defined in section 7 of the ECMAScript specification
-use crate::js::{JsBigInt, JsHandle, JsKey, JsObject, JsSymbol, JsType, JsValue};
+use crate::gc::GcHandle;
+use crate::js::{JsBigInt, JsKey, JsObject, JsSymbol, JsType, JsValue};
 use crate::string::Utf16String;
 
 pub fn type_(x: &JsValue) -> JsType {
@@ -38,18 +39,7 @@ pub fn type_(x: &JsValue) -> JsType {
 }
 
 pub fn to_primitive(input: &JsValue, preferred_type: Option<&str>) -> JsValue {
-    if type_(&input) == JsType::Object {
-        let hint = match preferred_type {
-            None => "default",
-            Some("String") => "string",
-            Some("Number") => "number",
-            _ => panic!(),
-        };
-
-        let exotic_to_prim = get_method(&input, "@@toPrimitive");
-    }
-
-    JsValue::Undefined
+    unimplemented!();
 }
 pub fn to_boolean(o: &JsValue, hint: &str) -> JsValue {
     unimplemented!();
@@ -196,7 +186,11 @@ pub fn has_own_property(o: &JsValue, p: &JsKey) -> bool {
 pub fn call(f: &JsValue, v: &JsValue, arguments_list: Option<Vec<&JsValue>>) -> JsValue {
     unimplemented!();
 }
-pub fn construct(f: &JsValue, arguments_list: Option<Vec<&JsValue>>, new_target: &JsValue) -> () {
+pub fn construct(
+    f: &JsValue,
+    arguments_list: Option<Vec<&JsValue>>,
+    new_target: Option<&JsValue>,
+) -> () {
     unimplemented!();
 }
 pub fn set_integrity_level(o: &Box<dyn JsObject>, level: &str) -> bool {
@@ -214,46 +208,62 @@ pub fn create_list_from_array_like(obj: JsHandle, element_types: JsType) -> () {
 pub fn invoke(v: JsHandle, p: JsKey, arguments_list: Option<Vec<&JsValue>>) -> () {
     unimplemented!();
 }
-pub fn ordinary_has_instance(x: &JsValue, y: &JsValue) -> () {
+pub fn ordinary_has_instance(c: GcHandle, o: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn species_constructor(x: &JsValue, y: &JsValue) -> () {
+// TODO: is `default_constructor` and return type correct?
+pub fn species_constructor(o: GcHandle, default_constructor: GcHandle) -> &Box<dyn JsObject> {
     unimplemented!();
 }
-pub fn enumerable_own_property_names(x: &JsValue, y: &JsValue) -> () {
+pub fn enumerable_own_property_names(o: GcHandle, kind: &str) -> Vec<GcHandle> {
     unimplemented!();
 }
-pub fn get_function_realm(x: &JsValue, y: &JsValue) -> () {
+// TODO: return type should be JsRealm
+pub fn get_function_realm(obj: GcHandle) -> () {
     unimplemented!();
 }
-pub fn copy_data_properties(x: &JsValue, y: &JsValue) -> () {
+pub fn copy_data_properties(
+    target: GcHandle,
+    source: GcHandle,
+    excluded_items: &Vec<GcHandle>,
+) -> GcHandle {
     unimplemented!();
 }
 
-pub fn get_iterator(x: &JsValue, y: &JsValue) -> () {
+// TODO: return type should be a Record
+pub fn get_iterator(obj: GcHandle, hint: Option<&str>, method: Option<GcHandle>) -> () {
     unimplemented!();
 }
-pub fn iterator_next(x: &JsValue, y: &JsValue) -> () {
+pub fn iterator_next(iterator_record: (), value: Option<GcHandle>) -> GcHandle {
     unimplemented!();
 }
-pub fn iterator_complete(x: &JsValue, y: &JsValue) -> () {
+pub fn iterator_complete(iter_result: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn iterator_value(x: &JsValue, y: &JsValue) -> () {
+pub fn iterator_value(iter_result: GcHandle) -> GcHandle {
     unimplemented!();
 }
-pub fn iterator_step(x: &JsValue, y: &JsValue) -> () {
+// TODO: iterator_record is a Record
+pub fn iterator_step(iterator_record: ()) -> GcHandle {
     unimplemented!();
 }
-pub fn iterator_close(x: &JsValue, y: &JsValue) -> () {
+// TODO: iterator_record is a Record
+// TODO: completion is a Record
+// TODO: return type is a Record
+pub fn iterator_close(iterator_record: (), completion: ()) -> () {
     unimplemented!();
 }
-pub fn async_iterator_close(x: &JsValue, y: &JsValue) -> () {
+// TODO: iterator_record is a Record
+// TODO: completion is a Record
+// TODO: return type is a Record
+pub fn async_iterator_close(iterator_record: (), completion: ()) -> () {
     unimplemented!();
 }
-pub fn create_iter_result_object(x: &JsValue, y: &JsValue) -> () {
+pub fn create_iter_result_object(value: &str, done: bool) -> GcHandle {
     unimplemented!();
 }
-pub fn create_list_iterator_record(x: &JsValue, y: &JsValue) -> () {
+// TODO: is list type correct?
+// TODO: return type is a Record
+pub fn create_list_iterator_record(list: Vec<GcHandle>) -> () {
     unimplemented!();
 }

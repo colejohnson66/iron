@@ -20,8 +20,6 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use gc::{Gc, Trace};
-
 mod array_buffer_view;
 
 pub use array_buffer_view::ArrayBufferView;
@@ -67,7 +65,7 @@ pub enum IdlType {
     // `USVString` <https://heycam.github.io/webidl/#idl-USVString>
     UsvString(StringUtf16),
     // `object` <https://heycam.github.io/webidl/#idl-object>
-    Object(Gc<dyn Trace>),
+    Object(()),
     // `symbol` <https://heycam.github.io/webidl/#idl-symbol>
     Symbol(()),
     // interface types <https://heycam.github.io/webidl/#idl-interface>

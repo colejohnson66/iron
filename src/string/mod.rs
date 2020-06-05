@@ -21,16 +21,21 @@
  * ============================================================================
  */
 pub struct Utf16String {
+    marked: bool,
     vec: Vec<u16>,
 }
 
 impl Utf16String {
     pub fn new() -> Utf16String {
-        Utf16String { vec: vec![] }
+        Utf16String {
+            marked: false,
+            vec: vec![],
+        }
     }
 
     pub fn with_capacity(capacity: usize) -> Utf16String {
         Utf16String {
+            marked: false,
             vec: Vec::with_capacity(capacity),
         }
     }

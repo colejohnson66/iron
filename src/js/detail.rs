@@ -20,12 +20,13 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::js::JsType;
+use crate::gc::GcHandle;
+use crate::js::JsValue;
 use crate::string::Utf16String;
 
-pub enum JsKey {
+pub enum JsKey<'a> {
     String(Utf16String),
-    Symbol(Box<dyn JsSymbol>),
+    Symbol(&'a dyn JsSymbol),
 }
 
 pub struct JsBigInt {}
@@ -35,107 +36,44 @@ pub enum JsNumber {
     Float(f64),
 }
 
-// TODO: same impl definition for BigInt
-impl JsNumber {
-    fn unary_minus(x: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn bitwise_not(x: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn exponentiate(x: &JsNumber, y: &JsNumber) -> Result<JsNumber, ()> {
-        unimplemented!();
-    }
-    fn multiply(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn divide(x: &JsNumber, y: &JsNumber) -> Result<JsNumber, ()> {
-        unimplemented!();
-    }
-    fn remainder(x: &JsNumber, y: &JsNumber) -> Result<JsNumber, ()> {
-        unimplemented!();
-    }
-    fn add(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn subtract(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn left_shift(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn signed_right_shift(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn unsigned_right_shift(x: &JsNumber, y: &JsNumber) -> Result<JsNumber, ()> {
-        unimplemented!();
-    }
-    fn less_than(x: &JsNumber, y: &JsNumber) -> Option<bool> {
-        unimplemented!();
-    }
-    fn equal(x: &JsNumber, y: &JsNumber) -> bool {
-        unimplemented!();
-    }
-    fn same_value(x: &JsNumber, y: &JsNumber) -> bool {
-        unimplemented!();
-    }
-    fn same_value_zero(x: &JsNumber, y: &JsNumber) -> bool {
-        unimplemented!();
-    }
-    fn bitwise_and(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn bitwise_xor(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn bitwise_or(x: &JsNumber, y: &JsNumber) -> JsNumber {
-        unimplemented!();
-    }
-    fn to_string(x: &JsNumber, y: &JsNumber) -> Utf16String {
-        unimplemented!();
-    }
-}
-
 pub trait JsSymbol {
     fn typename(&self) -> &str;
 
     // NOTE: returns `JsType::Undefined` or `JsType::String`
-    fn description(&self) -> &JsType;
+    fn description(&self) -> GcHandle;
 }
 
-pub trait JsObject {
+pub trait JsObject<'a> {
     fn typename(&self) -> &str;
 
-    fn get_prototype(&mut self) -> Option<&Box<dyn JsObject>>;
-    fn set_prototype(&mut self, v: Option<&Box<dyn JsObject>>) -> bool;
+    fn get_prototype(&mut self) -> Option<GcHandle>;
+    fn set_prototype(&mut self, v: Option<GcHandle>) -> bool;
     fn is_extensible(&mut self) -> bool;
     fn prevent_extensions(&mut self) -> bool;
-    fn get_own_property(&mut self, key: &JsKey) -> &JsType;
-    fn define_own_property(&mut self, key: &JsKey, desc: &JsType) -> bool;
-    fn has_property(&mut self, key: &JsKey) -> bool;
-    fn get(&mut self, key: &JsKey, this: ()) -> &JsType;
-    fn set(&mut self, key: &JsKey, val: &JsType, this: ()) -> bool;
-    fn delete(&mut self, key: &JsKey) -> bool;
-    fn own_property_keys(&mut self) -> Vec<&JsKey>;
-    fn call(&mut self, this: &JsType, args: Vec<&JsType>) -> &JsType;
-    fn construct(&mut self, args: Vec<&JsType>, this: &Box<dyn JsObject>) -> &Box<dyn JsObject>;
+    fn get_own_property(&mut self, key: GcHandle) -> GcHandle;
+    fn define_own_property(&mut self, key: GcHandle, desc: GcHandle) -> bool;
+    fn has_property(&mut self, key: GcHandle) -> bool;
+    fn get(&mut self, key: GcHandle, this: ()) -> GcHandle;
+    fn set(&mut self, key: GcHandle, val: GcHandle, this: ()) -> bool;
+    fn delete(&mut self, key: GcHandle) -> bool;
+    fn own_property_keys(&mut self) -> Vec<GcHandle>;
+    fn call(&mut self, this: GcHandle, args: &Vec<GcHandle>) -> GcHandle;
+    fn construct(&mut self, args: &Vec<GcHandle>, this: GcHandle) -> GcHandle;
 }
 
-pub struct JsDataProp {
-    value: JsType,
+pub struct JsDataProp<'a> {
+    value: JsValue<'a>,
     writable: bool,
     enumerable: bool,
     configurable: bool,
 }
 
-pub struct JsAccessorProp {
-    get: JsType,
-    set: JsType,
+pub struct JsAccessorProp<'a> {
+    get: JsValue<'a>,
+    set: JsValue<'a>,
     enumerable: bool,
     configurable: bool,
 }
-
-// TODO: implement section 7 <https://tc39.es/ecma262/#sec-abstract-operations>
 
 pub fn control(c: u32) -> bool {
     match c {

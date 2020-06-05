@@ -20,36 +20,43 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-mod boolean;
-mod error;
-mod function;
-mod object;
+pub trait GarbageCollected {
+    fn mark(&mut self);
+    fn unmark(&mut self);
+    fn marked(&self) -> bool;
+}
 
-pub use self::boolean::Boolean;
-pub use self::error::Error;
-pub use self::function::Function;
-pub use self::object::Object;
+pub type GcHandle = usize;
 
-// TODO: Symbol type
-// TODO: Error types: EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError
-// TODO: NativeError type
-// TODO: Number type
-// TODO: BigInt type
-// TODO: Math object
-// TODO: Date object
-// TODO: String object
-// TODO: Regex objects
-// TODO: Array objects
-// TODO: TypedArray types + objects
-// TODO: Map objects
-// TODO: Set objects
-// TODO: WeakMap objects
-// TODO: WeakSet objects
-// TODO: ArrayBuffer objects
-// TODO: SharedArrayBuffer objects
-// TODO: DataView objects
-// TODO: Atomics object
-// TODO: JSON object
-// TODO: section 25
-// TODO: Reflect object
-// TODO: Proxy objects
+pub struct Gc<T>
+where
+    T: GarbageCollected,
+{
+    roots: Vec<GcHandle>,
+    data: Vec<Option<Box<T>>>,
+}
+
+impl<T> Gc<T>
+where
+    T: GarbageCollected,
+{
+    pub fn new() -> Gc<T> {
+        Gc {
+            roots: vec![],
+            data: vec![],
+        }
+    }
+
+    /// Adds an object to the garbage heap and returns it's handle
+    pub fn add(&mut self, obj: T) -> GcHandle {
+        // TODO: look for a `None` in `self.data` and put there
+        self.data.push(Some(Box::new(obj)));
+        self.data.len() - 1
+    }
+
+    pub fn add_root(&mut self, obj: T) -> GcHandle {
+        let handle = self.add(obj);
+        self.roots.push(handle);
+        handle
+    }
+}

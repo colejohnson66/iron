@@ -21,14 +21,13 @@
  * ============================================================================
  */
 mod detail;
-pub mod intrinsic;
+//pub mod intrinsic;
 pub mod tokenizer;
 pub mod types;
+pub mod vm;
 
 pub use crate::js::detail::*;
 use crate::string::Utf16String;
-
-pub type JsHandle = usize;
 
 // <https://tc39.es/ecma262/#sec-ecmascript-language-types>
 // same as `JsValue`, but without values
@@ -44,13 +43,14 @@ pub enum JsType {
     Object,
 }
 // same as `JsType`, but with associated values
-pub enum JsValue {
+// do NOT use GcHandle here as this type is what's stored in the GC
+pub enum JsValue<'a> {
     Undefined,
     Null,
     Boolean(bool),
     String(Utf16String),
-    Symbol(JsHandle), // Box<dyn JsSymbol>
+    Symbol(&'a dyn JsSymbol),
     Number(JsNumber),
     BigInt(JsBigInt),
-    Object(JsHandle), // Box<dyn JsObject>
+    Object(&'a dyn JsObject<'a>),
 }
