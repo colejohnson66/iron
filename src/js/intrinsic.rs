@@ -22,8 +22,7 @@
  */
 // abstract operations as defined in section 7 of the ECMAScript specification
 //use crate::gc::GcJsObject;
-use crate::js::{GcJsObject, JsBigInt, JsType, JsValue};
-use crate::string::Utf16String;
+use crate::js::{GcJsObject, JsType, JsValue};
 use gc::*;
 
 pub fn type_(x: Gc<JsValue>) -> JsType {
