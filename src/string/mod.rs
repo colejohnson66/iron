@@ -20,6 +20,9 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+use gc::{Finalize, Trace};
+
+#[derive(Trace, Finalize)]
 pub struct Utf16String {
     marked: bool,
     vec: Vec<u16>,

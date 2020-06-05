@@ -26,7 +26,7 @@ pub trait GarbageCollected {
     fn marked(&self) -> bool;
 }
 
-pub type GcHandle = usize;
+//pub type GcHandle = usize;
 
 pub struct Gc<T>
 where

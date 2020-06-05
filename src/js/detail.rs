@@ -20,17 +20,16 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::gc::GcHandle;
 use crate::js::JsValue;
 use crate::string::Utf16String;
+use gc::*;
 
-pub enum JsKey<'a> {
-    String(Utf16String),
-    Symbol(&'a dyn JsSymbol),
-}
+pub type GcJsObject = Gc<&'static dyn JsObject>;
 
+#[derive(Trace, Finalize)]
 pub struct JsBigInt {}
 
+#[derive(Trace, Finalize)]
 pub enum JsNumber {
     Integer(i64),
     Float(f64),
@@ -39,38 +38,42 @@ pub enum JsNumber {
 pub trait JsSymbol {
     fn typename(&self) -> &str;
 
-    // NOTE: returns `JsType::Undefined` or `JsType::String`
-    fn description(&self) -> GcHandle;
+    // NOTE: returns `undefined` or string
+    fn description(&self) -> Option<&Utf16String>;
 }
 
-pub trait JsObject<'a> {
+pub trait JsObject {
     fn typename(&self) -> &str;
 
-    fn get_prototype(&mut self) -> Option<GcHandle>;
-    fn set_prototype(&mut self, v: Option<GcHandle>) -> bool;
+    fn get_prototype(&mut self) -> Option<GcJsObject>;
+    fn set_prototype(&mut self, v: Option<GcJsObject>) -> bool;
     fn is_extensible(&mut self) -> bool;
     fn prevent_extensions(&mut self) -> bool;
-    fn get_own_property(&mut self, key: GcHandle) -> GcHandle;
-    fn define_own_property(&mut self, key: GcHandle, desc: GcHandle) -> bool;
-    fn has_property(&mut self, key: GcHandle) -> bool;
-    fn get(&mut self, key: GcHandle, this: ()) -> GcHandle;
-    fn set(&mut self, key: GcHandle, val: GcHandle, this: ()) -> bool;
-    fn delete(&mut self, key: GcHandle) -> bool;
-    fn own_property_keys(&mut self) -> Vec<GcHandle>;
-    fn call(&mut self, this: GcHandle, args: &Vec<GcHandle>) -> GcHandle;
-    fn construct(&mut self, args: &Vec<GcHandle>, this: GcHandle) -> GcHandle;
+    // TODO: return type is a PropertyDescriptor
+    fn get_own_property(&mut self, key: GcJsObject) -> ();
+    // TODO: desc is a PropertyDescriptor
+    fn define_own_property(&mut self, key: GcJsObject, desc: ()) -> bool;
+    fn has_property(&mut self, key: GcJsObject) -> bool;
+    fn get(&mut self, key: GcJsObject, this: GcJsObject) -> GcJsObject;
+    fn set(&mut self, key: GcJsObject, val: GcJsObject, this: GcJsObject) -> bool;
+    fn delete(&mut self, key: GcJsObject) -> bool;
+    fn own_property_keys(&mut self) -> Vec<GcJsObject>;
+    //fn call(&mut self, this: GcJsObject, args: &Vec<GcJsObject>) -> GcJsObject;
+    //fn construct(&mut self, args: &Vec<GcJsObject>, this: GcJsObject) -> GcJsObject;
 }
 
-pub struct JsDataProp<'a> {
-    value: JsValue<'a>,
+#[derive(Trace, Finalize)]
+pub struct JsDataProp {
+    value: JsValue,
     writable: bool,
     enumerable: bool,
     configurable: bool,
 }
 
-pub struct JsAccessorProp<'a> {
-    get: JsValue<'a>,
-    set: JsValue<'a>,
+#[derive(Trace, Finalize)]
+pub struct JsAccessorProp {
+    get: JsValue,
+    set: JsValue,
     enumerable: bool,
     configurable: bool,
 }
