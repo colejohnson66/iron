@@ -20,6 +20,8 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
+// TODO: REMOVE!
+#![allow(unused)]
 // abstract operations as defined in section 7 of the ECMAScript specification
 //use crate::gc::GcJsObject;
 use crate::js::{GcJsObject, JsType, JsValue};
