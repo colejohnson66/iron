@@ -25,7 +25,7 @@ use crate::gc::GcHandle;
 use crate::js::{JsBigInt, JsKey, JsObject, JsSymbol, JsType, JsValue};
 use crate::string::Utf16String;
 
-pub fn type_(x: &JsValue) -> JsType {
+pub fn type_(x: GcHandle) -> JsType {
     match x {
         JsValue::Undefined => JsType::Undefined,
         JsValue::Null => JsType::Null,
@@ -38,110 +38,110 @@ pub fn type_(x: &JsValue) -> JsType {
     }
 }
 
-pub fn to_primitive(input: &JsValue, preferred_type: Option<&str>) -> JsValue {
+pub fn to_primitive(input: GcHandle, preferred_type: Option<&str>) -> JsValue {
     unimplemented!();
 }
-pub fn to_boolean(o: &JsValue, hint: &str) -> JsValue {
+pub fn to_boolean(o: GcHandle, hint: &str) -> JsValue {
     unimplemented!();
 }
-pub fn to_numeric(value: &JsValue) -> JsValue {
+pub fn to_numeric(value: GcHandle) -> JsValue {
     unimplemented!();
 }
-pub fn to_number(argument: &JsValue) -> JsValue {
+pub fn to_number(argument: GcHandle) -> JsValue {
     unimplemented!();
 }
-pub fn to_integer(argument: &JsValue) -> JsValue {
+pub fn to_integer(argument: GcHandle) -> JsValue {
     unimplemented!();
 }
-pub fn to_int32(argument: &JsValue) -> i32 {
+pub fn to_int32(argument: GcHandle) -> i32 {
     unimplemented!();
 }
-pub fn to_uint32(argument: &JsValue) -> u32 {
+pub fn to_uint32(argument: GcHandle) -> u32 {
     unimplemented!();
 }
-pub fn to_int16(argument: &JsValue) -> i16 {
+pub fn to_int16(argument: GcHandle) -> i16 {
     unimplemented!();
 }
-pub fn to_uint16(argument: &JsValue) -> u16 {
+pub fn to_uint16(argument: GcHandle) -> u16 {
     unimplemented!();
 }
-pub fn to_int8(argument: &JsValue) -> i8 {
+pub fn to_int8(argument: GcHandle) -> i8 {
     unimplemented!();
 }
-pub fn to_uint8(argument: &JsValue) -> u8 {
+pub fn to_uint8(argument: GcHandle) -> u8 {
     unimplemented!();
 }
-pub fn to_uint8_clamp(argument: &JsValue) -> u8 {
+pub fn to_uint8_clamp(argument: GcHandle) -> u8 {
     unimplemented!();
 }
-pub fn to_bigint(argument: &JsValue) -> JsValue {
+pub fn to_bigint(argument: GcHandle) -> JsValue {
     unimplemented!();
 }
 pub fn string_to_bigint(argument: &str) -> JsBigInt {
     unimplemented!();
 }
-pub fn to_bigint64(argument: &JsValue) -> JsBigInt {
+pub fn to_bigint64(argument: GcHandle) -> JsBigInt {
     unimplemented!();
 }
-pub fn to_biguint64(argument: &JsValue) -> JsBigInt {
+pub fn to_biguint64(argument: GcHandle) -> JsBigInt {
     unimplemented!();
 }
-pub fn to_string(argument: &JsValue) -> String {
+pub fn to_string(argument: GcHandle) -> String {
     unimplemented!();
 }
-pub fn to_object(argument: &JsValue) -> Box<dyn JsObject> {
+pub fn to_object(argument: GcHandle) ->GcHandle {
     unimplemented!();
 }
-pub fn to_property_key(argument: &JsValue) -> JsKey {
+pub fn to_property_key(argument: GcHandle) -> JsKey {
     unimplemented!();
 }
-pub fn to_length(argument: &JsValue) -> u64 {
+pub fn to_length(argument: GcHandle) -> u64 {
     unimplemented!();
 }
-pub fn canonical_numeric_index_string(argument: &JsValue) -> JsValue {
+pub fn canonical_numeric_index_string(argument: GcHandle) -> JsValue {
     unimplemented!();
 }
-pub fn to_index(value: &JsValue) -> u64 {
+pub fn to_index(value: GcHandle) -> u64 {
     unimplemented!();
 }
 
-pub fn require_object_coercible(argument: &JsValue) -> JsValue {
+pub fn require_object_coercible(argument: GcHandle) -> JsValue {
     unimplemented!();
 }
-pub fn is_array(argument: &JsValue) -> bool {
+pub fn is_array(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_callable(argument: &JsValue) -> bool {
+pub fn is_callable(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_constructor(argument: &JsValue) -> bool {
+pub fn is_constructor(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_extensible(o: &Box<dyn JsObject>) -> bool {
+pub fn is_extensible(o: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_integer(argument: &JsValue) -> bool {
+pub fn is_integer(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_non_negative_integer(argument: &JsValue) -> bool {
+pub fn is_non_negative_integer(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_property_key(argument: &JsValue) -> bool {
+pub fn is_property_key(argument: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn is_regexp(argument: &JsValue) -> bool {
+pub fn is_regexp(argument: GcHandle) -> bool {
     unimplemented!();
 }
 pub fn is_string_prefix(p: &Utf16String, q: &Utf16String) -> bool {
     unimplemented!();
 }
-pub fn same_value(x: &JsValue, y: &JsValue) -> () {
+pub fn same_value(x: GcHandle, y: GcHandle) -> () {
     unimplemented!();
 }
-pub fn same_value_zero(x: &JsValue, y: &JsValue) -> () {
+pub fn same_value_zero(x: GcHandle, y: GcHandle) -> () {
     unimplemented!();
 }
-pub fn same_value_non_numeric(x: &JsValue, y: &JsValue) -> () {
+pub fn same_value_non_numeric(x: GcHandle, y: GcHandle) -> () {
     unimplemented!();
 }
 
@@ -150,69 +150,69 @@ pub fn same_value_non_numeric(x: &JsValue, y: &JsValue) -> () {
 pub fn make_basic_object(internal_slots_list: ()) -> JsHandle {
     unimplemented!();
 }
-pub fn get(o: &JsValue, p: &JsKey) -> JsValue {
+pub fn get(o: GcHandle, p: &JsKey) -> JsValue {
     unimplemented!();
 }
-pub fn get_v(v: &JsValue, p: &JsKey) -> JsValue {
+pub fn get_v(v: GcHandle, p: &JsKey) -> JsValue {
     unimplemented!();
 }
-pub fn set(o: &JsValue, p: &JsKey, v: &JsValue, throw: bool) -> bool {
+pub fn set(o: GcHandle, p: &JsKey, v: GcHandle, throw: bool) -> bool {
     unimplemented!();
 }
-pub fn create_data_property(o: &JsValue, p: &JsKey, v: &JsValue) -> () {
+pub fn create_data_property(o: GcHandle, p: &JsKey, v: GcHandle) -> () {
     unimplemented!();
 }
-pub fn create_method_property(o: &JsValue, p: &JsKey, v: &JsValue) -> () {
+pub fn create_method_property(o: GcHandle, p: &JsKey, v: GcHandle) -> () {
     unimplemented!();
 }
-pub fn create_data_property_or_throw(o: &JsValue, p: &JsKey, v: &JsValue) -> () {
+pub fn create_data_property_or_throw(o: GcHandle, p: &JsKey, v: GcHandle) -> () {
     unimplemented!();
 }
-pub fn define_property_or_throw(o: &JsValue, p: &JsKey, desc: &JsValue) -> bool {
+pub fn define_property_or_throw(o: GcHandle, p: &JsKey, desc: GcHandle) -> bool {
     unimplemented!();
 }
-pub fn delete_property_or_throw(o: &JsValue, p: &JsKey) -> bool {
+pub fn delete_property_or_throw(o: GcHandle, p: &JsKey) -> bool {
     unimplemented!();
 }
-pub fn get_method(v: &JsValue, p: &JsKey) -> () {
+pub fn get_method(v: GcHandle, p: &JsKey) -> () {
     unimplemented!();
 }
-pub fn has_property(o: &JsValue, p: &JsKey) -> bool {
+pub fn has_property(o: GcHandle, p: &JsKey) -> bool {
     unimplemented!();
 }
-pub fn has_own_property(o: &JsValue, p: &JsKey) -> bool {
+pub fn has_own_property(o: GcHandle, p: &JsKey) -> bool {
     unimplemented!();
 }
-pub fn call(f: &JsValue, v: &JsValue, arguments_list: Option<Vec<&JsValue>>) -> JsValue {
+pub fn call(f: GcHandle, v: GcHandle, arguments_list: Option<Vec<GcHandle>>) -> JsValue {
     unimplemented!();
 }
 pub fn construct(
-    f: &JsValue,
-    arguments_list: Option<Vec<&JsValue>>,
-    new_target: Option<&JsValue>,
+    f: GcHandle,
+    arguments_list: Option<Vec<GcHandle>>,
+    new_target: Option<GcHandle>,
 ) -> () {
     unimplemented!();
 }
-pub fn set_integrity_level(o: &Box<dyn JsObject>, level: &str) -> bool {
+pub fn set_integrity_level(o: GcHandle level: &str) -> bool {
     unimplemented!();
 }
-pub fn test_integrity_level(o: &Box<dyn JsObject>, level: &str) -> bool {
+pub fn test_integrity_level(o:GcHandle, level: &str) -> bool {
     unimplemented!();
 }
-pub fn create_array_from_list(elements: Vec<&JsValue>) -> () {
+pub fn create_array_from_list(elements: Vec<GcHandle>) -> () {
     unimplemented!();
 }
 pub fn create_list_from_array_like(obj: JsHandle, element_types: JsType) -> () {
     unimplemented!();
 }
-pub fn invoke(v: JsHandle, p: JsKey, arguments_list: Option<Vec<&JsValue>>) -> () {
+pub fn invoke(v: JsHandle, p: JsKey, arguments_list: Option<Vec<GcHandle>>) -> () {
     unimplemented!();
 }
 pub fn ordinary_has_instance(c: GcHandle, o: GcHandle) -> bool {
     unimplemented!();
 }
 // TODO: is `default_constructor` and return type correct?
-pub fn species_constructor(o: GcHandle, default_constructor: GcHandle) -> &Box<dyn JsObject> {
+pub fn species_constructor(o: GcHandle, default_constructor: GcHandle) -> GcHandle {
     unimplemented!();
 }
 pub fn enumerable_own_property_names(o: GcHandle, kind: &str) -> Vec<GcHandle> {
