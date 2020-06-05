@@ -28,7 +28,7 @@ pub mod types;
 pub use crate::js::detail::*;
 use crate::string::Utf16String;
 
-type JsHandle = usize;
+pub type JsHandle = usize;
 
 // <https://tc39.es/ecma262/#sec-ecmascript-language-types>
 // same as `JsValue`, but without values

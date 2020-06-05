@@ -196,25 +196,22 @@ pub fn has_own_property(o: &JsValue, p: &JsKey) -> bool {
 pub fn call(f: &JsValue, v: &JsValue, arguments_list: Option<Vec<&JsValue>>) -> JsValue {
     unimplemented!();
 }
-pub fn construct(x: &JsValue, y: &JsValue) -> () {
+pub fn construct(f: &JsValue, arguments_list: Option<Vec<&JsValue>>, new_target: &JsValue) -> () {
     unimplemented!();
 }
-pub fn set_integrity_level(x: &JsValue, y: &JsValue) -> () {
+pub fn set_integrity_level(o: &Box<dyn JsObject>, level: &str) -> bool {
     unimplemented!();
 }
-pub fn test_integrity_level(x: &JsValue, y: &JsValue) -> () {
+pub fn test_integrity_level(o: &Box<dyn JsObject>, level: &str) -> bool {
     unimplemented!();
 }
-pub fn create_array_from_list(x: &JsValue, y: &JsValue) -> () {
+pub fn create_array_from_list(elements: Vec<&JsValue>) -> () {
     unimplemented!();
 }
-pub fn length_of_array_like(x: &JsValue, y: &JsValue) -> () {
+pub fn create_list_from_array_like(obj: JsHandle, element_types: JsType) -> () {
     unimplemented!();
 }
-pub fn create_list_from_array_like(x: &JsValue, y: &JsValue) -> () {
-    unimplemented!();
-}
-pub fn invoke(x: &JsValue, y: &JsValue) -> () {
+pub fn invoke(v: JsHandle, p: JsKey, arguments_list: Option<Vec<&JsValue>>) -> () {
     unimplemented!();
 }
 pub fn ordinary_has_instance(x: &JsValue, y: &JsValue) -> () {
