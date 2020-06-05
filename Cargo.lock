@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "iron2"
+name = "iron"
 version = "0.1.0"
 dependencies = [
  "gc",
