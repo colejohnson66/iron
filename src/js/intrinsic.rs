@@ -41,6 +41,9 @@ pub fn type_(x: Gc<JsValue>) -> JsType {
 }
 
 pub fn to_primitive(input: Gc<JsValue>, preferred_type: Option<&str>) -> JsValue {
+    fn ordinary_to_primitive(o: GcJsObject, hint: &str) -> GcJsObject {
+        unimplemented!();
+    }
     unimplemented!();
 }
 pub fn to_boolean(o: GcJsObject, hint: &str) -> JsValue {
