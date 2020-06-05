@@ -24,7 +24,6 @@
 // WARNING: this MUST be removed for release
 #![allow(dead_code)]
 
-//pub mod gc;
 pub mod html;
 pub mod infra;
 pub mod io;
