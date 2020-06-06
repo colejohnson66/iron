@@ -24,7 +24,7 @@ use crate::js::JsValue;
 use crate::string::Utf16String;
 use gc::*;
 
-pub type GcJsObject = Gc<&'static dyn JsObject>;
+pub type GcJsValue = Gc<JsValue>;
 
 #[derive(Trace, Finalize)]
 pub struct JsBigInt {}
@@ -45,21 +45,21 @@ pub trait JsSymbol {
 pub trait JsObject {
     fn typename(&self) -> &str;
 
-    fn get_prototype(&mut self) -> Option<GcJsObject>;
-    fn set_prototype(&mut self, v: Option<GcJsObject>) -> bool;
+    fn get_prototype(&mut self) -> Option<GcJsValue>;
+    fn set_prototype(&mut self, v: Option<GcJsValue>) -> bool;
     fn is_extensible(&mut self) -> bool;
     fn prevent_extensions(&mut self) -> bool;
     // TODO: return type is a PropertyDescriptor
-    fn get_own_property(&mut self, key: GcJsObject) -> ();
+    fn get_own_property(&mut self, key: GcJsValue) -> ();
     // TODO: desc is a PropertyDescriptor
-    fn define_own_property(&mut self, key: GcJsObject, desc: ()) -> bool;
-    fn has_property(&mut self, key: GcJsObject) -> bool;
-    fn get(&mut self, key: GcJsObject, this: GcJsObject) -> GcJsObject;
-    fn set(&mut self, key: GcJsObject, val: GcJsObject, this: GcJsObject) -> bool;
-    fn delete(&mut self, key: GcJsObject) -> bool;
-    fn own_property_keys(&mut self) -> Vec<GcJsObject>;
-    //fn call(&mut self, this: GcJsObject, args: &Vec<GcJsObject>) -> GcJsObject;
-    //fn construct(&mut self, args: &Vec<GcJsObject>, this: GcJsObject) -> GcJsObject;
+    fn define_own_property(&mut self, key: GcJsValue, desc: ()) -> bool;
+    fn has_property(&mut self, key: GcJsValue) -> bool;
+    fn get(&mut self, key: GcJsValue, this: GcJsValue) -> GcJsValue;
+    fn set(&mut self, key: GcJsValue, val: GcJsValue, this: GcJsValue) -> bool;
+    fn delete(&mut self, key: GcJsValue) -> bool;
+    fn own_property_keys(&mut self) -> Vec<GcJsValue>;
+    //fn call(&mut self, this: GcJsValue, args: &Vec<GcJsValue>) -> GcJsValue;
+    //fn construct(&mut self, args: &Vec<GcJsValue>, this: GcJsValue) -> GcJsValue;
 }
 
 #[derive(Trace, Finalize)]

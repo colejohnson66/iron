@@ -23,8 +23,8 @@
 pub mod detail;
 
 use crate::io::iter::LineOffsetIterator;
-use crate::js::detail::*;
 use crate::js::tokenizer::detail::*;
+use crate::js::*;
 use std::io::Cursor;
 
 const ZWNJ: u32 = 0x200C;

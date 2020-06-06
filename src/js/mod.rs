@@ -21,7 +21,7 @@
  * ============================================================================
  */
 mod detail;
-pub mod intrinsic;
+//pub mod intrinsic;
 pub mod tokenizer;
 pub mod types;
 pub mod vm;
@@ -44,7 +44,7 @@ pub enum JsType {
     Object,
 }
 // same as `JsType`, but with associated values
-// do NOT use GcHandle here as this type is what's stored in the GC
+// do NOT use GcJsValue here as this type is what's stored in the GC
 #[derive(Trace, Finalize)]
 pub enum JsValue {
     Undefined,
