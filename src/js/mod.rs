@@ -27,32 +27,3 @@ pub mod types;
 pub mod vm;
 
 pub use crate::js::detail::*;
-use crate::string::Utf16String;
-use gc::{Finalize, Trace};
-
-// <https://tc39.es/ecma262/#sec-ecmascript-language-types>
-// same as `JsValue`, but without values
-#[derive(Copy, Clone, PartialEq)]
-pub enum JsType {
-    Undefined,
-    Null,
-    Boolean,
-    String,
-    Symbol,
-    Number,
-    BigInt,
-    Object,
-}
-// same as `JsType`, but with associated values
-// do NOT use GcJsValue here as this type is what's stored in the GC
-#[derive(Trace, Finalize)]
-pub enum JsValue {
-    Undefined,
-    Null,
-    Boolean(bool),
-    String(Utf16String),
-    Symbol(&'static dyn JsSymbol),
-    Number(JsNumber),
-    BigInt(JsBigInt),
-    Object(&'static dyn JsObject),
-}
