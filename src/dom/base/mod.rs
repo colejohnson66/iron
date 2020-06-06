@@ -20,48 +20,6 @@
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
  */
-use crate::js::{GcJsValue, JsObject};
+mod object;
 
-pub struct Object {}
-
-impl JsObject for Object {
-    fn typename(&self) -> &str {
-        unimplemented!();
-    }
-
-    fn get_prototype(&mut self) -> Option<GcJsValue> {
-        unimplemented!();
-    }
-    fn set_prototype(&mut self, v: Option<GcJsValue>) -> bool {
-        unimplemented!();
-    }
-    fn is_extensible(&mut self) -> bool {
-        unimplemented!();
-    }
-    fn prevent_extensions(&mut self) -> bool {
-        unimplemented!();
-    }
-    // TODO: return type is a PropertyDescriptor
-    fn get_own_property(&mut self, key: GcJsValue) -> () {
-        unimplemented!();
-    }
-    // TODO: desc is a PropertyDescriptor
-    fn define_own_property(&mut self, key: GcJsValue, desc: ()) -> bool {
-        unimplemented!();
-    }
-    fn has_property(&mut self, key: GcJsValue) -> bool {
-        unimplemented!();
-    }
-    fn get(&mut self, key: GcJsValue, this: GcJsValue) -> GcJsValue {
-        unimplemented!();
-    }
-    fn set(&mut self, key: GcJsValue, val: GcJsValue, this: GcJsValue) -> bool {
-        unimplemented!();
-    }
-    fn delete(&mut self, key: GcJsValue) -> bool {
-        unimplemented!();
-    }
-    fn own_property_keys(&mut self) -> Vec<GcJsValue> {
-        unimplemented!();
-    }
-}
+pub use object::Object;
