@@ -21,12 +21,17 @@
  * ============================================================================
  */
 use crate::js::{GcJsValue, JsObject};
+use std::collections::HashMap;
 
-pub struct Object {}
+pub struct Object {
+    proto: Option<GcJsValue>,
+    realm: (),
+    props: HashMap<GcJsValue, GcJsValue>,
+}
 
 impl JsObject for Object {
     fn typename(&self) -> &str {
-        unimplemented!();
+        "Object"
     }
 
     fn get_prototype(&mut self) -> Option<GcJsValue> {
@@ -64,4 +69,72 @@ impl JsObject for Object {
     fn own_property_keys(&mut self) -> Vec<GcJsValue> {
         unimplemented!();
     }
+}
+
+impl Object {
+    fn new(value: Option<GcJsValue>) -> Object {
+        unimplemented!();
+    }
+    fn assign(target: GcJsValue, sources: Vec<()>) -> GcJsValue {
+        unimplemented!();
+    }
+    fn create(o: GcJsValue, properties: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn define_properties(o: GcJsValue, properties: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn entries(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn freeze(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn from_entries(iterable: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn get_own_property_descriptor(o: GcJsValue, p: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn get_own_property_descriptors(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn get_own_property_names(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn get_own_property_symbols(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn get_prototype_of(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn is(value1: GcJsValue, value2: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn is_extensible(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn is_frozen(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn is_sealed(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn keys(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn prevent_extensions(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    // Object.prototype
+    fn seal(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn set_prototype_of(o: GcJsValue, proto: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    fn values(o: GcJsValue) -> GcJsValue {
+        unimplemented!();
+    }
+    // TODO: properties (section 19.1.3)
 }
