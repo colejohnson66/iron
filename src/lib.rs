@@ -23,6 +23,7 @@
 // disable dead code warning
 // WARNING: this MUST be removed for release
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 pub mod dom;
 pub mod html;
