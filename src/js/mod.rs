@@ -24,7 +24,6 @@
 pub mod tokenizer;
 pub mod vm;
 
-//use crate::string::Utf16String;
 use gc::*;
 use std::collections::HashMap;
 
@@ -36,19 +35,6 @@ pub trait JsVtable {
     fn add_fn(&mut self, name: &str, func: GcVtableFn);
     fn delete_fn(&mut self, name: &str);
     fn call(&mut self, name: &str, args: Vec<GcVtable>) -> GcVtable;
-}
-
-pub struct DataProp {
-    value: GcVtable,
-    writable: bool,
-    enumerable: bool,
-    configurable: bool,
-}
-pub struct AccessorProp {
-    get: GcVtable,
-    set: GcVtable,
-    enumerable: bool,
-    configurable: bool,
 }
 
 #[macro_export]
