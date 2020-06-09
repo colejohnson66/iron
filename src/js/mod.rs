@@ -19,11 +19,79 @@
  * You should have received a copy of the GNU General Public License along with
  *   Iron. If not, see <http://www.gnu.org/licenses/>.
  * ============================================================================
- */
-mod detail;
-//pub mod intrinsic;
+ *///pub mod intrinsic;
 pub mod tokenizer;
-pub mod types;
 pub mod vm;
 
-pub use crate::js::detail::*;
+//use crate::string::Utf16String;
+use gc::*;
+use std::collections::HashMap;
+
+pub type GcObjectBase = Gc<&'static dyn JsVtable>;
+pub type GcObjectFn = fn(Vec<GcObjectBase>) -> GcObjectBase;
+
+pub trait JsVtable {
+    fn vtable(&self) -> &HashMap<String, GcObjectFn>;
+    fn add_fn(&mut self, name: &str, func: GcObjectFn);
+    fn delete_fn(&mut self, name: &str);
+    fn call(&mut self, name: &str, args: Vec<GcObjectBase>) -> GcObjectBase;
+}
+
+pub struct DataProp {
+    value: GcObjectBase,
+    writable: bool,
+    enumerable: bool,
+    configurable: bool,
+}
+pub struct AccessorProp {
+    get: GcObjectBase,
+    set: GcObjectBase,
+    enumerable: bool,
+    configurable: bool,
+}
+
+#[macro_export]
+macro_rules! vtable_impl {
+    ($type:ty) => {
+        impl crate::js::JsVtable for $type {
+            fn vtable(&self) -> &std::collections::HashMap<String, crate::js::GcObjectFn> {
+                &self.vtable
+            }
+            fn add_fn(&mut self, name: &str, func: crate::js::GcObjectFn) {
+                self.vtable.insert(name.into(), func);
+            }
+            fn delete_fn(&mut self, name: &str) {
+                self.vtable.remove(name);
+            }
+            fn call(
+                &mut self,
+                name: &str,
+                args: Vec<crate::js::GcObjectBase>,
+            ) -> crate::js::GcObjectBase {
+                self.vtable.get(name).unwrap()(args)
+            }
+        }
+    };
+}
+
+pub fn control(c: u32) -> bool {
+    match c {
+        0x200C | 0x200D | 0xFEFF => true,
+        _ => false,
+    }
+}
+
+pub fn white_space(c: u32) -> bool {
+    match c {
+        0x9 | 0xB | 0xC | 0x20 | 0xA0 | 0xFEFF => true,
+        // TODO: any other Unicode "Space_Separator" code point
+        _ => false,
+    }
+}
+
+pub fn line_terminator(c: u32) -> bool {
+    match c {
+        0xA | 0xD | 0x2028 | 0x2029 => true,
+        _ => false,
+    }
+}
