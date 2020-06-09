@@ -28,25 +28,25 @@ pub mod vm;
 use gc::*;
 use std::collections::HashMap;
 
-pub type GcObjectBase = Gc<&'static dyn JsVtable>;
-pub type GcObjectFn = fn(Vec<GcObjectBase>) -> GcObjectBase;
+pub type GcVtable = Gc<&'static dyn JsVtable>;
+pub type GcVtableFn = fn(Vec<GcVtable>) -> GcVtable;
 
 pub trait JsVtable {
-    fn vtable(&self) -> &HashMap<String, GcObjectFn>;
-    fn add_fn(&mut self, name: &str, func: GcObjectFn);
+    fn vtable(&self) -> &HashMap<String, GcVtableFn>;
+    fn add_fn(&mut self, name: &str, func: GcVtableFn);
     fn delete_fn(&mut self, name: &str);
-    fn call(&mut self, name: &str, args: Vec<GcObjectBase>) -> GcObjectBase;
+    fn call(&mut self, name: &str, args: Vec<GcVtable>) -> GcVtable;
 }
 
 pub struct DataProp {
-    value: GcObjectBase,
+    value: GcVtable,
     writable: bool,
     enumerable: bool,
     configurable: bool,
 }
 pub struct AccessorProp {
-    get: GcObjectBase,
-    set: GcObjectBase,
+    get: GcVtable,
+    set: GcVtable,
     enumerable: bool,
     configurable: bool,
 }
@@ -55,20 +55,16 @@ pub struct AccessorProp {
 macro_rules! vtable_impl {
     ($type:ty) => {
         impl crate::js::JsVtable for $type {
-            fn vtable(&self) -> &std::collections::HashMap<String, crate::js::GcObjectFn> {
+            fn vtable(&self) -> &std::collections::HashMap<String, crate::js::GcVtableFn> {
                 &self.vtable
             }
-            fn add_fn(&mut self, name: &str, func: crate::js::GcObjectFn) {
+            fn add_fn(&mut self, name: &str, func: crate::js::GcVtableFn) {
                 self.vtable.insert(name.into(), func);
             }
             fn delete_fn(&mut self, name: &str) {
                 self.vtable.remove(name);
             }
-            fn call(
-                &mut self,
-                name: &str,
-                args: Vec<crate::js::GcObjectBase>,
-            ) -> crate::js::GcObjectBase {
+            fn call(&mut self, name: &str, args: Vec<crate::js::GcVtable>) -> crate::js::GcVtable {
                 self.vtable.get(name).unwrap()(args)
             }
         }
