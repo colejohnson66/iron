@@ -21,6 +21,7 @@
  * ============================================================================
  */
 //pub mod intrinsic;
+pub mod builtin;
 pub mod tokenizer;
 pub mod vm;
 
